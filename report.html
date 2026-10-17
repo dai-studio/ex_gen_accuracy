@@ -1,0 +1,456 @@
+<title>Moxy Build Comparison</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a single lab-report column (max ~70rem), summary first, then evidence in descending zoom: verdict, chart, tables, item ledger, method. */
+:root {
+  --bg: #f7f8f8;
+  --surface: #fdfdfc;
+  --ink: #15191c;
+  --ink-2: #4b5458;
+  --ink-3: #737c80;
+  --rule: #dfe3e4;
+  --rule-strong: #c4cacc;
+  --accent: #1d5c6b;
+  --s-prompt: #eb6834;
+  --s-specmd: #2a78d6;
+  --s-specdai: #1baf7a;
+  --good: #0ca30c;
+  --warn: #fab219;
+  --crit: #d03b3b;
+  --heat-0: #eef4f5;
+  --heat-1: #1d5c6b;
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121516; --surface: #1a1d1e; --ink: #eef0f0; --ink-2: #b9c0c2; --ink-3: #8b9396;
+    --rule: #2c3234; --rule-strong: #3d4447; --accent: #7cc3d3;
+    --s-prompt: #d95926; --s-specmd: #3987e5; --s-specdai: #199e70;
+    --heat-0: #1f2527; --heat-1: #7cc3d3; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121516; --surface: #1a1d1e; --ink: #eef0f0; --ink-2: #b9c0c2; --ink-3: #8b9396;
+  --rule: #2c3234; --rule-strong: #3d4447; --accent: #7cc3d3;
+  --s-prompt: #d95926; --s-specmd: #3987e5; --s-specdai: #199e70;
+  --heat-0: #1f2527; --heat-1: #7cc3d3; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--f-body); font-size: 17px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 70rem; margin: 0 auto; padding-block: 48px 72px; display: grid; gap: 56px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(2rem, 4.5vw, 3rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.5rem; font-weight: 700; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; max-width: 65ch; }
+code, .mono { font-family: var(--f-mono); font-size: 0.86em; }
+.eyebrow { font-family: var(--f-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.muted { color: var(--ink-2); }
+section { display: grid; gap: 20px; min-width: 0; }
+.sec-head { display: grid; gap: 6px; border-top: 1px solid var(--rule-strong); padding-top: 18px; }
+.num { font-variant-numeric: tabular-nums; }
+
+header { display: grid; gap: 14px; }
+.lede { font-size: 1.15rem; color: var(--ink-2); max-width: 62ch; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--f-mono); font-size: 0.8rem; color: var(--ink-3); }
+
+.verdict { display: grid; gap: 12px; padding: 22px 24px; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; }
+.verdict p { max-width: 70ch; }
+.verdict strong { font-weight: 600; }
+
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: 0; margin-right: 6px; flex: none; }
+.c-prompt { background: var(--s-prompt); } .c-specmd { background: var(--s-specmd); } .c-specdai { background: var(--s-specdai); }
+
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 18px 20px; display: grid; gap: 14px; align-content: start; }
+.card-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.card-h .name { font-family: var(--f-mono); font-weight: 500; font-size: 0.95rem; display: flex; align-items: center; }
+.card-h .input { font-family: var(--f-mono); font-size: 0.75rem; color: var(--ink-3); }
+.figs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fig .v { font-family: var(--f-display); font-size: 2rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.fig .l { font-family: var(--f-mono); font-size: 0.72rem; color: var(--ink-3); letter-spacing: 0.04em; text-transform: uppercase; margin-top: 4px; }
+.stack { display: flex; gap: 2px; height: 10px; }
+.stack span { display: block; height: 100%; }
+.stack span:first-child { border-radius: 3px 0 0 3px; } .stack span:last-child { border-radius: 0 3px 3px 0; }
+.s-P { background: var(--good); } .s-H { background: var(--warn); } .s-F { background: var(--crit); }
+.legend-s { display: flex; flex-wrap: wrap; gap: 4px 14px; font-family: var(--f-mono); font-size: 0.75rem; color: var(--ink-2); }
+.legend-s span { display: inline-flex; align-items: center; gap: 6px; }
+.legend-s i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.card .stackwrap { display: grid; gap: 6px; }
+.card .stacklabel { font-family: var(--f-mono); font-size: 0.75rem; color: var(--ink-2); }
+.card .sub { font-size: 0.92rem; color: var(--ink-2); }
+
+.chart-box { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px; position: relative; min-width: 0; }
+.chart-box svg { display: block; width: 100%; height: auto; overflow: visible; }
+.axis text, .lbl { font-family: var(--f-mono); font-size: 11px; fill: var(--ink-3); }
+.axis line.grid { stroke: var(--rule); stroke-width: 1; }
+.axis line.base { stroke: var(--rule-strong); }
+.pt-label { font-family: var(--f-mono); font-size: 12px; fill: var(--ink); font-weight: 500; }
+.pt-sub { font-family: var(--f-mono); font-size: 11px; fill: var(--ink-2); }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-family: var(--f-mono); font-size: 12px; line-height: 1.45; padding: 8px 10px; border-radius: 4px; white-space: nowrap; transform: translate(-50%, calc(-100% - 12px)); z-index: 5; }
+.two { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.note { font-size: 0.95rem; color: var(--ink-2); }
+
+.tbl-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { padding: 9px 14px; text-align: left; border-bottom: 1px solid var(--rule); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-family: var(--f-mono); font-weight: 500; font-size: 0.74rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); white-space: nowrap; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--f-mono); font-size: 0.86rem; white-space: nowrap; }
+tr.group td { font-family: var(--f-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); background: var(--bg); padding-top: 14px; }
+td.best { font-weight: 600; color: var(--ink); }
+td.best::after { content: " ◆"; color: var(--accent); font-size: 0.7em; }
+
+.heat td.cell { text-align: center; font-family: var(--f-mono); font-size: 0.85rem; font-variant-numeric: tabular-nums; min-width: 6.5rem; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: 5px; overflow: hidden; }
+.seg button { font: 500 0.8rem var(--f-mono); padding: 7px 12px; border: 0; background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--rule-strong); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.seg button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-family: var(--f-mono); font-size: 0.74rem; white-space: nowrap; color: var(--ink-2); }
+.chip i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+.ledger td.id { font-family: var(--f-mono); font-size: 0.82rem; color: var(--ink-3); white-space: nowrap; }
+.ledger td.req { min-width: 16rem; }
+.ledger .src { font-family: var(--f-mono); font-size: 0.72rem; color: var(--ink-3); margin-top: 3px; overflow-wrap: anywhere; }
+.ledger details summary { cursor: pointer; color: var(--accent); font-family: var(--f-mono); font-size: 0.75rem; margin-top: 4px; list-style: none; }
+.ledger details summary::-webkit-details-marker { display: none; }
+.ledger details summary::before { content: "+ "; }
+.ledger details[open] summary::before { content: "− "; }
+.ledger .ev { display: grid; gap: 6px; margin-top: 8px; font-size: 0.84rem; color: var(--ink-2); }
+.ledger .ev div { padding-left: 10px; border-left: 2px solid var(--rule-strong); overflow-wrap: anywhere; }
+.ledger .ev b { font-family: var(--f-mono); font-weight: 500; font-size: 0.78rem; color: var(--ink); }
+
+.find { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.find > div { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.find h3 { display: flex; align-items: center; font-family: var(--f-mono); font-weight: 500; font-size: 0.95rem; }
+.find ul { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; font-size: 0.93rem; color: var(--ink-2); }
+.find li::marker { color: var(--ink-3); }
+
+.method ul { margin: 0; padding-left: 1.1em; display: grid; gap: 8px; max-width: 72ch; color: var(--ink-2); font-size: 0.95rem; }
+
+@media (max-width: 860px) {
+  .cards, .find, .two { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pt circle { transition: r .15s ease; }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">ex_gen_accuracy · run date 2026-10-17</div>
+    <h1>Moxy build comparison</h1>
+    <p class="lede">Three fresh Claude Code sessions built the same gateway, Moxy, from three forms of input: a one-paragraph prompt, a 205-line prose spec and a 555-line BPMN&nbsp;+&nbsp;<code>dai:</code> spec. This report compares what each run cost with how closely its code follows the specification.</p>
+    <div class="meta"><span>model claude-opus-5-5</span><span>effort high</span><span>Claude Code 2.1.302</span><span>one run per input</span><span>68-item checklist</span></div>
+  </header>
+
+  <div class="verdict">
+    <div class="eyebrow">Verdict</div>
+    <p><strong>The two spec builds are equally accurate, and the <code>.dai</code> build cost 28% less.</strong> Scored against the 68 requirements in <code>spec.dai</code>, the source that <code>spec.md</code> was written from, spec_dai scores 93.4% for $8.17 and spec_md 92.6% for $11.31. Neither fails any item.</p>
+    <p><strong>spec_md loses points where the prose dropped exact names.</strong> <code>spec.dai</code> gives record field names (<code>userSub</code>, <code>ownerSub</code>, <code>pkceVerifier</code>…) and the config API paths. <code>spec.md</code> only describes them in words. spec_dai uses the exact names and spec_md invented its own, which costs it six points. On the shared behaviour, spec_md is slightly more complete. Scored only against the prose, it reaches 97.1%.</p>
+    <p><strong>The one-paragraph prompt was cheapest ($6.77) and least accurate (41.2%).</strong> With no spec, it chose TypeScript on Node instead of Rust, Pingora, SvelteKit and redb, and replaced OpenID Connect with password logins. Most of its features exist in a different form, so 40 of 68 items are partial.</p>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Cost against accuracy</div>
+      <h2>Where each run lands</h2>
+      <p class="muted">Accuracy is the weighted checklist score: a pass counts 1, a partial 0.5 and a fail 0. Cost is the session total reported by <code>/cost</code>.</p>
+    </div>
+    <div class="two">
+      <div class="chart-box" id="scatter-box"><svg id="scatter" viewBox="0 0 560 360" role="img" aria-label="Scatter plot of session cost against checklist accuracy for the three runs"></svg></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Derived</th><th class="n">prompt_md</th><th class="n">spec_md</th><th class="n">spec_dai</th></tr></thead>
+          <tbody id="derived"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Cost and effort</div>
+      <h2>What each session spent</h2>
+      <p class="muted">All three runs show nearly the same output and thinking tokens. The cost gap comes from cache reads: the longer a session runs, the more often it re-reads its growing context. The spec_md session took 227 turns and read 22.7M cached tokens. spec_dai took 164 turns and read 14.3M.</p>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Metric</th><th class="n">prompt_md</th><th class="n">spec_md</th><th class="n">spec_dai</th></tr></thead>
+        <tbody id="cost"></tbody>
+      </table>
+    </div>
+    <p class="note">◆ marks the lowest cost or the highest score in a row. Tests were re-run for this report on 2026-10-17, and every suite passed. Source lines count <code>.rs</code>, <code>.ts</code>, <code>.svelte</code> and <code>.js</code> files, including tests and excluding build output and dependencies.</p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Accuracy by spec area</div>
+      <h2>Where the builds differ</h2>
+      <p class="muted">Weighted score in each area of the spec. The two spec builds are equal in six of eleven areas. spec_md is ahead in startup and shutdown, configuration, and middleware. spec_dai is ahead in the JSON API and in storage, where <code>spec.dai</code> names exact paths and field names.</p>
+    </div>
+    <div class="tbl-wrap">
+      <table class="heat">
+        <thead><tr><th>Area</th><th class="n">Items</th><th style="text-align:center">prompt_md</th><th style="text-align:center">spec_md</th><th style="text-align:center">spec_dai</th></tr></thead>
+        <tbody id="heat"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Findings</div>
+      <h2>Notable deviations and defects</h2>
+      <p class="muted">These come from reading the source. Some fall outside the checklist, such as bugs in behaviour the spec does not mention.</p>
+    </div>
+    <div class="find">
+      <div>
+        <h3><span class="dot c-prompt"></span>prompt_md</h3>
+        <ul>
+          <li>Used a different stack: TypeScript on <code>node:http</code> with no dependencies and hand-written HTML. It has no Rust, Pingora, SvelteKit or redb.</li>
+          <li>Replaced OpenID Connect with local username and password logins and JWT sessions. The example config's default credentials are admin/admin.</li>
+          <li>Proxy routes are open by default, where the spec requires an API key.</li>
+          <li>Leaks credentials: the caller's <code>Authorization</code> header is forwarded upstream on routes without auth middleware.</li>
+          <li>Retries 502/503/504 responses on other upstreams, which replays POST requests to models.</li>
+          <li>Resets quotas and rate limits on every config reload.</li>
+          <li>Made <code>/api</code> an OpenAI-compatible model API. The spec's assumptions rule this out.</li>
+          <li>Added features the spec does not ask for, including <code>redact</code>, <code>cors</code>, <code>ip-filter</code>, <code>system-prompt</code>, a statistics dashboard and TLS termination.</li>
+        </ul>
+      </div>
+      <div>
+        <h3><span class="dot c-specmd"></span>spec_md</h3>
+        <ul>
+          <li>Doesn't use the identifiers in <code>spec.dai</code>: stored records use snake_case with <code>subject</code> and <code>owner</code>, values are wrapped in <code>{v, exp}</code>, and the config API uses <code>/api/config/system</code> and <code>/api/config/middleware?path=</code>.</li>
+          <li>The session cookie's Max-Age is sent once and never refreshed. Sessions slide on the server, but the browser still drops the cookie when the original TTL runs out. spec_dai has the same bug.</li>
+          <li>A <code>${VAR}</code> in a route <code>path</code> or in <code>version</code> is neither resolved nor rejected.</li>
+          <li>For chunked request bodies, the 413 comes only after the upstream has received part of the body. spec_dai has the same bug.</li>
+          <li>Makes blocking redb calls on Pingora's async worker threads.</li>
+          <li>The timeout applies to each read, not to the whole wait, and connect timeouts are capped at 10s.</li>
+          <li><code>&lt;server&gt;</code> and <code>&lt;auth&gt;</code> are optional, and the order of top-level elements is not enforced.</li>
+        </ul>
+      </div>
+      <div>
+        <h3><span class="dot c-specdai"></span>spec_dai</h3>
+        <ul>
+          <li>Shares the cookie Max-Age bug and the late chunked-body 413 with spec_md.</li>
+          <li>Upstream 5xx responses don't take an upstream out of rotation; only connection failures and timeouts do.</li>
+          <li>Doesn't close the KV store on shutdown. The process exits directly after draining requests.</li>
+          <li>Admin writes swap the config in directly instead of going through the watcher's reload path.</li>
+          <li>Doesn't enforce that the destination comes last in a route, and accepts <code>/*</code> as a route path.</li>
+          <li>Builds the OIDC <code>redirect_uri</code> as <code>http://&lt;Host&gt;</code>, so it's wrong behind TLS and trusts the client's Host header.</li>
+          <li>A failed reload's error can stay on screen after the file is fixed, if the fix restores the active content exactly.</li>
+          <li>Grants admin only if the identity provider hasn't marked the email unverified. The spec has no such condition.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Checklist</div>
+      <h2>All 68 requirements</h2>
+      <p class="muted">Each requirement comes from <code>inputs/spec.dai</code>, and its source node is shown under it. † marks the six requirements where <code>spec.dai</code> names an exact identifier that <code>spec.md</code> only describes in words. The full list is in <code>requirements.md</code>. Open a row for the auditor's evidence, with file and line references.</p>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Filter rows">
+        <button type="button" id="f-all" aria-pressed="true">All 68</button>
+        <button type="button" id="f-diff" aria-pressed="false">spec builds differ</button>
+        <button type="button" id="f-nonpass" aria-pressed="false">Any spec build not pass</button>
+      </div>
+      <div class="legend-s"><span><i class="s-P"></i>pass</span><span><i class="s-H"></i>partial</span><span><i class="s-F"></i>fail</span></div>
+    </div>
+    <div class="tbl-wrap">
+      <table class="ledger">
+        <thead><tr><th>ID</th><th>Requirement</th><th>prompt_md</th><th>spec_md</th><th>spec_dai</th></tr></thead>
+        <tbody id="ledger"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="method">
+    <div class="sec-head">
+      <div class="eyebrow">Method and limits</div>
+      <h2>How the numbers were produced</h2>
+    </div>
+    <ul>
+      <li><strong>Cost and tokens</strong> come from each folder's <code>stats.md</code>, which <code>stats.py</code> reads from the session transcript's final <code>cost-state</code> record. No subagents or web searches were used in any run.</li>
+      <li><strong>Accuracy</strong> uses 68 requirements taken from <code>inputs/spec.dai</code>, the model that <code>spec.md</code> was written from, grouped A–K and listed with their source nodes in <code>requirements.md</code>. Three independent read-only auditors, one per build, scored every item from the source code rather than from <code>NOTES.md</code>.</li>
+      <li><strong>Six items were re-scored against <code>spec.dai</code>'s exact identifiers.</strong> The first audit used the prose wording. G6, J3, J4, J5, J6 and J9 name API paths and record fields exactly in <code>spec.dai</code> but only in words in <code>spec.md</code>. I checked those items in the code. spec_md moved from pass to partial on all six. spec_dai and prompt_md didn't change. Against the prose wording, spec_md scores 97.1%.</li>
+      <li><strong>One score was normalised.</strong> The auditors scored the same chunked-body behaviour differently, so spec_md I4 was changed from pass to partial to match spec_dai. Both builds enforce the limit the same way, and the code was checked.</li>
+      <li><strong>prompt_md never saw the spec.</strong> Its score measures how far a build without context lands from the intended design. It does not measure whether the session followed its instructions. A partial for prompt_md usually means the same capability with different names, paths or status codes.</li>
+      <li><strong>There is one run per input,</strong> so the 0.8-point gap between the two spec builds is within what a second run could reverse. The $3.14 cost gap could reverse too. Repeating each variant three to five times would separate the effect of the input format from run-to-run noise.</li>
+      <li><strong>Build check.</strong> <code>cargo test</code> passed for both Rust builds: 68 + 15 tests for spec_md and 27 + 20 for spec_dai. <code>npm run typecheck</code>, <code>build</code> and <code>test</code> passed for prompt_md (155 tests). The SvelteKit UIs were not rebuilt; their checked-in <code>ui/build</code> output was used.</li>
+      <li><strong>Input drift.</strong> <code>outputs/spec_dai/spec.dai</code> differs from <code>inputs/spec.dai</code> in one attribute, <code>workflowMeta version</code> (0.1.0 in the working copy, 0.2.0 in the original). The rest of the content is identical.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+const DATA = {"secs": {"A": "Stack & platform", "B": "Process & environment", "C": "Configuration (moxy.xml / MML v1)", "D": "Routing", "E": "Built-in pages", "F": "Auth routes (OIDC)", "G": "JSON API", "H": "Proxy path", "I": "Middleware", "J": "Storage, auth records, sessions, users", "K": "Cache"}, "items": [{"id": "A1", "t": "Rust, stable toolchain, edition 2024.", "prompt_md": {"s": "F", "n": "TypeScript on Node >=22.18 (package.json engines/scripts); no Rust"}, "spec_md": {"s": "P", "n": "Cargo.toml:4 edition = \"2024\"; no nightly features or toolchain override"}, "spec_dai": {"s": "P", "n": "Cargo.toml:4 edition = \"2024\"; no nightly features/toolchain pin"}, "src": "rust (Activity_0n9lc1t) dai:version", "dag": false}, {"id": "A2", "t": "Pingora is the HTTP proxy layer (listener, routing to upstreams, load balancing, streaming), latest stable, pinned in Cargo.lock.", "prompt_md": {"s": "F", "n": "HTTP layer is node:http/https (src/gateway.ts:3-4, src/proxy.ts:1-2); no Pingora"}, "spec_md": {"s": "P", "n": "Cargo.toml:17 pingora 0.9.0 (proxy feature); Cargo.lock pins pingora/pingora-proxy 0.9.0; proxy.rs implements ProxyHttp"}, "spec_dai": {"s": "P", "n": "Cargo.toml:9 pingora 0.9 (proxy,rustls); Cargo.lock pins pingora 0.9.0; server.rs/proxy.rs implement ProxyHttp"}, "src": "pingora (Activity_1nafjvj) dai:version, dai:purpose", "dag": false}, {"id": "A3", "t": "SvelteKit with adapter-static, built as a single-page app, latest stable, pinned in package-lock.json.", "prompt_md": {"s": "F", "n": "UI is hand-written HTML templates in ui/*.html rendered with {{}} substitution (src/builtins/common.ts:41-48); no SvelteKit"}, "spec_md": {"s": "P", "n": "ui/vite.config.js:12 adapter-static fallback 200.html; +layout.js ssr=false; package-lock pins @sveltejs/kit 3.1.0, adapter-static 4.0.0"}, "spec_dai": {"s": "P", "n": "ui/package.json exact versions @sveltejs/kit 3.1.0 + adapter-static 4.0.0, pinned in ui/package-lock.json; vite.config.js:12 adapter-static fallback index.html; +layout.js ssr=false"}, "src": "sveltekit (Activity_09jmudl) dai:notes, dai:version", "dag": false}, {"id": "A4", "t": "The UI build is embedded in the Rust binary and served under /_app/*. No Node.js at runtime. The UI gets all data from /api.", "prompt_md": {"s": "F", "n": "UI read from ../../ui/ on disk at runtime (src/builtins/common.ts:29-36); requires Node at runtime; no /_app prefix"}, "spec_md": {"s": "P", "n": "build.rs include_bytes! of ui/build (index + /_app assets) into binary; ui.rs/pages.rs serve /_app; build.rs falls back to an embedded placeholder page if ui/build is missing"}, "spec_dai": {"s": "P", "n": "src/ui.rs rust-embed of ui/build; assets served under /_app (ui.rs:28, builtin.rs:38); placeholder if UI not built; no Node at runtime"}, "src": "sveltekit (Activity_09jmudl) dai:notes; decision SvelteKit served by Moxy (Decision_ui)", "dag": false}, {"id": "A5", "t": "redb is the embedded key-value engine behind the KV store, latest stable, pinned in Cargo.lock.", "prompt_md": {"s": "F", "n": "No KV engine at all; all state in memory or moxy.xml"}, "spec_md": {"s": "P", "n": "Cargo.toml:18 redb 4.4.0, pinned in Cargo.lock; kv.rs RedbStore"}, "spec_dai": {"s": "P", "n": "Cargo.toml redb 4, Cargo.lock redb 4.4.0; store.rs RedbStore"}, "src": "redb (Activity_redb001); decision Embedded KV engine (Decision_kv)", "dag": false}, {"id": "B1", "t": "Only MOXY_CONFIG (default ./moxy.xml), MOXY_DATA_DIR (default ./data, created if missing) and MOXY_LOG (error, warn, info, debug or trace; default info) are read directly, and only at startup.", "prompt_md": {"s": "H", "n": "Only MOXY_CONFIG read, default moxy.xml (src/cli.ts:24-26); no MOXY_DATA_DIR; log level from <logging level> in XML, not MOXY_LOG (src/config.ts:247-265)"}, "spec_md": {"s": "P", "n": "server.rs:27-47 MOXY_CONFIG default moxy.xml, MOXY_DATA_DIR default data (created in kv.rs:130), MOXY_LOG levels default info; env_logger::Builder::new() does not read RUST_LOG (but see contradictions re reqwest proxy env)"}, "spec_dai": {"s": "P", "n": "state.rs:29-43 MOXY_CONFIG ./moxy.xml, MOXY_DATA_DIR ./data (created server.rs:71), MOXY_LOG default info, invalid level falls back to info (server.rs:38)"}, "src": "environment variables (Activity_0m863ow) dai:notes; decision Env vars vs config (Decision_env)", "dag": false}, {"id": "B2", "t": "Startup runs in this order: 1. read the environment variables; 2. load and validate moxy.xml, and if it is missing or invalid, log the error and exit non-zero; 3. open the KV store; 4. bind to <server host port> (default 127.0.0.1:8080); 5. start watching moxy.xml.", "prompt_md": {"s": "H", "n": "Loads config, exits non-zero if missing/invalid (src/cli.ts:93-98,125-133), binds default 127.0.0.1:8080 (config.ts:228); no KV open step, no file watcher (SIGHUP reload instead, cli.ts:106)"}, "spec_md": {"s": "P", "n": "server.rs:83-156 env -> load_file (Err => exit non-zero via main.rs:63-69) -> RedbStore::open_dir -> bind check + pingora add_tcp -> watcher spawned after ExecutionPhase::Running"}, "spec_dai": {"s": "H", "n": "server.rs:56-160 env->config (exit non-zero main.rs:66)->KV->listener->watcher, but watcher is started (server.rs:125) before server.run() actually binds the socket (add_tcp only registers)"}, "src": "serve (Activity_0k3fev3) dai:notes \"Startup sequence\", dai:baseUrl", "dag": false}, {"id": "B3", "t": "On SIGINT or SIGTERM: stop accepting connections, let in-flight requests finish (at most 30 s), then close the KV store.", "prompt_md": {"s": "H", "n": "SIGINT/SIGTERM -> server.close + 5s grace then destroy sockets (src/cli.ts:107-115, gateway.ts:192-204); 5s not 30s; no KV to close"}, "spec_md": {"s": "P", "n": "server.rs:61-76 SIGINT+SIGTERM -> GracefulTerminate; grace_period 30s; shutdown thread waits inflight<=30s then kv.close() (server.rs:160-193)"}, "spec_dai": {"s": "H", "n": "server.rs:21-36,105-150 SIGINT/SIGTERM graceful, waits in-flight <=30s, but then std::process::exit(0) without dropping/closing the redb Database (no explicit KV close)"}, "src": "serve (Activity_0k3fev3) dai:notes \"Shutdown\"", "dag": false}, {"id": "B4", "t": "Every error Moxy itself returns uses {\"error\": {\"type\": \"<snake_case_type>\", \"message\": \"<human readable>\"}}.", "prompt_md": {"s": "H", "n": "Body is {error:{message,type:'moxy_error',code:'<snake>'}} (src/util.ts:20-22); snake_case id is in 'code', 'type' is constant"}, "spec_md": {"s": "P", "n": "error.rs:97-104 {error:{type,message[,details]}}; all built-in/proxy errors go through ApiResponse::error / write_error; fail_to_proxy maps pingora errors to MoxyError"}, "spec_dai": {"s": "P", "n": "error.rs:34-40 {error:{type,message}} (+optional details); used for builtins, proxy rejects and fail_to_proxy (proxy.rs:561)"}, "src": "serve (Activity_0k3fev3) dai:notes", "dag": false}, {"id": "C1", "t": "The schema is <moxy version=\"1\">, then <server host port/>, then <auth issuer client-id client-secret session-ttl> with one or more <admin email/> children, then repeatable <route> elements.", "prompt_md": {"s": "H", "n": "Root <moxy> (version optional), <server host port> matches (config.ts:194-245); <auth secret token-ttl> with <user>/<api-key> children, no issuer/client-id/client-secret/session-ttl/<admin email> (config.ts:267-317); routes wrapped in <routes>; extra sections logging/builtins/upstreams/chains/middleware"}, "spec_md": {"s": "H", "n": "xml.rs:95-160 parses moxy/server/auth/admin/route; but <server> and <auth> are both optional (config/mod.rs:640,664; tests use configs without them) and element order (server, auth, then routes) is not enforced; <auth> requires >=1 admin (mod.rs:724)"}, "spec_dai": {"s": "H", "n": "parse.rs:86-148 root/server/auth/admin/route parsed, but <auth> is optional and zero <admin> elements are accepted (spec: auth with one or more admins); element order not enforced"}, "src": "moxy.xml (config) (Activity_0q42btx) dai:notes \"Schema (MML v1)\"", "dag": false}, {"id": "C2", "t": "<route> attributes: path is required and is either a literal prefix ending in /* or an exact path; auth is none, api-key or session, default api-key; description is shown on /.", "prompt_md": {"s": "H", "n": "<route path description> with prefix '/*' or exact (config.ts:424-432,524-532); no auth attribute -- auth via <auth> middleware, routes open by default"}, "spec_md": {"s": "P", "n": "config/mod.rs:132-160 prefix ending /* or exact; mod.rs:768-780 auth none|api-key|session default api-key; description optional"}, "spec_dai": {"s": "P", "n": "resolve.rs:499-534 path exact or prefix ending /* ('*' elsewhere rejected), auth none|api-key|session default api-key; description free text"}, "src": "moxy.xml (config) (Activity_0q42btx) dai:notes \"<route> attributes\"", "dag": false}, {"id": "C3", "t": "Each route lists its middleware elements in execution order, followed by exactly one destination: <upstream url/> or <load-balance>.", "prompt_md": {"s": "H", "n": "Children are <upstream>(1..n), <description>, <middleware> wrapper, <models> in any order (config.ts:449-471); no <load-balance> element, strategy is a route attribute"}, "spec_md": {"s": "P", "n": "xml.rs:171-178 destination must be last element (second destination also rejected); middleware kept in document order"}, "spec_dai": {"s": "H", "n": "parse.rs:155-316 exactly one destination enforced and middleware kept in document order, but destination is not required to be last (middleware after <upstream> accepted)"}, "src": "moxy.xml (config) (Activity_0q42btx) dai:notes schema", "dag": false}, {"id": "C4", "t": "${NAME} in any attribute is replaced with environment variable NAME at load time. A missing variable is a validation error.", "prompt_md": {"s": "P", "n": "${VAR} interpolated in all attributes (and text); unset throws ConfigError (config.ts:166-183); adds ${VAR:-default} extension"}, "spec_md": {"s": "H", "n": "env.rs substitute() used for most attributes and unset var fails validation, but route 'path' (mod.rs:749 parses rd.path raw) and moxy 'version' (mod.rs:628) are never substituted, so ${VAR} there is neither resolved nor rejected"}, "spec_dai": {"s": "P", "n": "resolve.rs:208-229 ${VAR} substitution in all attributes; unset var -> validation error"}, "src": "moxy.xml (config) (Activity_0q42btx) dai:notes", "dag": false}, {"id": "C5", "t": "Validation rejects: a duplicate route path; a path equal to / or under /chat, /admin, /auth, /api or /_app; a route with no <upstream> or <load-balance>; an unknown element; an unresolved ${NAME}.", "prompt_md": {"s": "H", "n": "Rejects unknown elements/attrs, missing upstream (config.ts:471), builtin prefixes chat/admin/auth/api when enabled (config.ts:430-434); does NOT reject duplicate paths (only duplicate ids, 417), root path '/' or '/*', or /_app"}, "spec_md": {"s": "P", "n": "mod.rs:671 duplicate path; mod.rs:752-759 root and reserved (routing.rs:21 chat/admin/auth/api/_app); mod.rs:955 no destination; xml.rs unknown elements (and unknown attributes) rejected"}, "spec_dai": {"s": "H", "n": "resolve.rs:510-523 duplicates, '/', reserved prefixes, missing destination (parse.rs:313), unknown elements rejected; but path \"/*\" (root catch-all) passes since empty stem skips the reserved check (resolve.rs:516)"}, "src": "moxy.xml (config) (Activity_0q42btx) dai:notes \"Validation errors\"; decision Route matching (Decision_routing)", "dag": false}, {"id": "C6", "t": "The file is watched. On a change (debounced 500 ms) it is parsed and validated. If it is valid, the new config is swapped in atomically and in-flight requests finish on the old one. If it is invalid, the previous config stays active and the error is logged and shown in /admin.", "prompt_md": {"s": "H", "n": "No file watcher/debounce; reload via SIGHUP or POST /admin/api/reload does atomic runtime swap and keeps previous config on error with log (gateway.ts:93-116); error shown only in reload response, not persisted for admin UI"}, "spec_md": {"s": "P", "n": "state.rs:254-317 notify watcher, 500ms quiet-period debounce; reload_from_disk ArcSwap swap (in-flight hold Arc<Config>); invalid keeps old, logs error, last_error shown in admin UI (admin/+page.svelte:244)"}, "spec_dai": {"s": "P", "n": "watcher.rs 500ms quiet-period debounce; state.rs:114-178 ArcSwap atomic swap, invalid keeps previous, logs and stores last_error shown in admin (api.rs:55)"}, "src": "moxy.xml (config) (Activity_0q42btx) dai:notes \"Lifecycle\"", "dag": false}, {"id": "C7", "t": "/admin edits are written back to the file: validate, write a temp file, atomically rename it over the original. The rename triggers the normal reload.", "prompt_md": {"s": "F", "n": "No admin config-write path; admin UI/API is read-only + reload"}, "spec_md": {"s": "P", "n": "state.rs:205-217 compile/validate -> write_atomically (temp file + rename, state.rs:231-250) -> reload_from_disk"}, "spec_dai": {"s": "H", "n": "state.rs:181-214 validate -> temp file -> fsync -> rename; but the new config is activated directly in-process (swap) rather than via the watcher reload path (watcher then no-ops on same hash)"}, "src": "moxy.xml (config) (Activity_0q42btx) dai:notes; decision /admin persists to moxy.xml (Decision_adminwrite)", "dag": false}, {"id": "D1", "t": "Built-in routes are reserved and matched first: / (exact), /chat and /chat/*, /admin and /admin/*, /auth/*, /api/*, /_app/*.", "prompt_md": {"s": "H", "n": "/admin,/auth,/chat,/api handled first (gateway.ts:220-229) plus /healthz,/.well-known; no /_app; '/' only served if no proxy route matches (gateway.ts:288-295)"}, "spec_md": {"s": "P", "n": "routing.rs:24-38 classify checked first in proxy.rs:469"}, "spec_dai": {"s": "P", "n": "builtin.rs:15-22 '/', /chat, /admin, /auth, /api, /_app checked first in proxy.rs:296"}, "src": "Routes (Activity_00vb7qp) dai:notes step 1", "dag": false}, {"id": "D2", "t": "Proxy routes from moxy.xml are handled by /*. The longest matching path prefix wins; on a tie, the route declared first wins.", "prompt_md": {"s": "P", "n": "Longest base wins, ties by declaration order (router.ts:34-45); exact routes additionally preferred over prefixes"}, "spec_md": {"s": "P", "n": "config/mod.rs:436-450 longest literal wins, strict > keeps first declared on ties"}, "spec_dai": {"s": "P", "n": "resolve.rs:175-185 longest prefix, strict > keeps first declared on tie"}, "src": "Routes (Activity_00vb7qp) dai:notes step 2; decision Route matching (Decision_routing)", "dag": false}, {"id": "D3", "t": "No match returns 404 {\"error\": {\"type\": \"route_not_found\", ...}}.", "prompt_md": {"s": "H", "n": "404 with code 'route_not_found' (gateway.ts:296) but type='moxy_error'"}, "spec_md": {"s": "P", "n": "proxy.rs:284-286 MoxyError::route_not_found (404, route_not_found)"}, "spec_dai": {"s": "P", "n": "proxy.rs:182 + error.rs:58 404 route_not_found"}, "src": "Routes (Activity_00vb7qp) dai:notes step 3", "dag": false}, {"id": "E1", "t": "GET / is an anonymous SvelteKit page (200) listing each proxy route's path, description and auth mode. It never shows upstream URLs, headers or credentials.", "prompt_md": {"s": "F", "n": "GET / renders landing page of links to builtins (pages.ts:32-41, ui/index.html); does not list routes/descriptions/auth"}, "spec_md": {"s": "P", "n": "pages.rs:37-48 anonymous 200 SPA shell; routes/+page.svelte lists path/description/auth from /api/endpoints; EndpointInfo (handlers.rs:193) exposes no upstream/header/credential data"}, "spec_dai": {"s": "P", "n": "builtin.rs:58 GET / anonymous SPA 200; ui/src/routes/+page.svelte lists path/description/auth from /api/endpoints (api.rs:32 no upstream data)"}, "src": "/ (anon) (Activity_1ceywrr) dai:notes, dai:authType=\"none\", dai:statusCode=\"200\"", "dag": false}, {"id": "E2", "t": "GET /chat requires a signed-in session (user or admin). Without one it returns 302 to /auth/login?return_to=/chat. With one it returns 200.", "prompt_md": {"s": "H", "n": "Anonymous -> 302 /auth/login?next=/chat (pages.ts:16-21); param 'next' not return_to; login only required if chat-auth and users exist"}, "spec_md": {"s": "P", "n": "pages.rs:43-55 session required; anonymous -> 302 /auth/login?return_to=/chat; user/admin -> 200"}, "spec_dai": {"s": "P", "n": "builtin.rs:62-72 no session -> 302 /auth/login?return_to=%2Fchat; signed in -> 200"}, "src": "/chat (Activity_1kjuls9) dai:notes, dai:statusCode=\"200\"", "dag": false}, {"id": "E3", "t": "The chat model picker lists every proxy route that has <ai>. Messages go to POST /api/chat, which runs the route's full middleware pipeline (so rate limits and token budgets apply to the user) and streams the reply as SSE. History is kept in the browser only.", "prompt_md": {"s": "H", "n": "Picker lists models from <models> via /api/v1/models (ui/chat.html:84), not <ai> routes; posts to /api/v1/chat/completions which runs full route pipeline (api.ts:66-98) and streams SSE; history in browser memory (chat.html:46)"}, "spec_md": {"s": "P", "n": "chat/+page.svelte:24 filters endpoints with chat (<ai>); api/chat.rs:158 run_request_phase (rate limits/budgets) and streams SSE; no localStorage, history kept in component state"}, "spec_dai": {"s": "P", "n": "chat page filters endpoints with chat (<ai>); chat.rs runs pipeline::request_phase (rate limit/budget) and streams SSE; records usage; no server-side history, no browser storage persistence"}, "src": "/chat (Activity_1kjuls9) dai:notes", "dag": false}, {"id": "E4", "t": "GET /admin requires the admin role. A signed-in non-admin gets 403. An anonymous caller is redirected to /auth/login?return_to=/admin. An admin gets 200.", "prompt_md": {"s": "H", "n": "Anon -> 302 /auth/login?next=/admin, non-admin 403, admin 200 (admin.ts:17-29); 'next' instead of return_to"}, "spec_md": {"s": "P", "n": "pages.rs:44-55 Role::Admin needed; anonymous 302 with return_to; non-admin 403; admin 200"}, "spec_dai": {"s": "P", "n": "builtin.rs:62-72 anon -> 302 login?return_to=/admin, non-admin -> 403 JSON, admin -> 200"}, "src": "/admin (Activity_06nppal) dai:notes, dai:statusCode=\"200\"", "dag": false}, {"id": "E5", "t": "The admin UI can edit routes and their upstreams, edit system settings (<server> and <auth>), edit each route's middleware, create, list and revoke API keys, and show the active config version and the last reload error.", "prompt_md": {"s": "F", "n": "Admin UI is read-only dashboard: status, routes, upstream health, stats, reload button (admin.ts:39-93, ui/admin.html); no route/settings/middleware CRUD, no API key management"}, "spec_md": {"s": "P", "n": "admin/+page.svelte: route add/edit/delete incl. upstream/load-balance (lines 84-165), MiddlewareEditor, server+auth settings (357-373), keys create/list/revoke (202-222), generation/hash and last_error (238-247)"}, "spec_dai": {"s": "P", "n": "ui/src/routes/admin/+page.svelte routes+upstream/load-balance CRUD, settings (server/auth) PUT, MiddlewareEditor per route, keys create/list/revoke, version + lastError banner (lines 150-155)"}, "src": "/admin (Activity_06nppal) dai:notes \"Functions\"", "dag": false}, {"id": "F1", "t": "Sign-in uses the OpenID Connect authorization code flow with PKCE. /auth/* needs no prior authentication.", "prompt_md": {"s": "F", "n": "No OIDC/PKCE; local username/password with scrypt (auth.ts:138-147)"}, "spec_md": {"s": "P", "n": "auth/oidc.rs:166-197 response_type=code, S256 code_challenge; complete_login sends code_verifier"}, "spec_dai": {"s": "P", "n": "auth.rs:430-440 openidconnect auth code flow with PKCE S256 + nonce"}, "src": "/auth (Activity_19uonmy) dai:notes, dai:authType=\"none\"", "dag": false}, {"id": "F2", "t": "GET /auth/login?return_to=<path> creates a login-state record and redirects (302) to the OIDC provider.", "prompt_md": {"s": "F", "n": "GET /auth/login renders a password form (builtins/auth.ts:46-61); no state record, no provider redirect"}, "spec_md": {"s": "P", "n": "signin.rs:65-80 + oidc.rs:173-196 stores auth#state record, 302 to authorization_endpoint"}, "spec_dai": {"s": "P", "n": "auth.rs:416-455 creates auth#state#<state> record then 302 to provider"}, "src": "/auth (Activity_19uonmy) dai:notes", "dag": false}, {"id": "F3", "t": "GET /auth/callback validates state and nonce, exchanges the code, creates or updates the user record, creates a session, sets the cookie, and redirects to return_to (default /).", "prompt_md": {"s": "F", "n": "No /auth/callback"}, "spec_md": {"s": "P", "n": "oidc.rs:209-290 state take, code exchange, ID token verified (iss/aud/sig), nonce checked; signin.rs:101-115 upsert user, create session, Set-Cookie, redirect to return_to or /"}, "spec_dai": {"s": "P", "n": "auth.rs:458-522 state lookup+delete, code exchange with verifier, ID token nonce check, upsert user, session, Set-Cookie, redirect return_to or /"}, "src": "/auth (Activity_19uonmy) dai:notes", "dag": false}, {"id": "F4", "t": "An invalid or expired state at the callback returns 400.", "prompt_md": {"s": "F", "n": "No state validation"}, "spec_md": {"s": "P", "n": "oidc.rs:209-219 InvalidState -> signin.rs:47 400 invalid_state"}, "spec_dai": {"s": "P", "n": "auth.rs:463-466 missing/unknown/expired state -> 400 invalid_state"}, "src": "/auth (Activity_19uonmy) dai:notes", "dag": false}, {"id": "F5", "t": "POST /auth/logout deletes the session, clears the cookie and redirects to /.", "prompt_md": {"s": "H", "n": "POST /auth/logout revokes JWT jti, clears cookie, redirects (303) to /auth/login for forms or returns JSON (builtins/auth.ts:104-116); not to '/'"}, "spec_md": {"s": "P", "n": "signin.rs:118-136 POST deletes session (requires CSRF token), clears cookie, 302 /"}, "spec_dai": {"s": "P", "n": "auth.rs:525-530 POST /auth/logout deletes session, clears cookie (Max-Age=0), 302 /"}, "src": "/auth (Activity_19uonmy) dai:notes", "dag": false}, {"id": "F6", "t": "Only same-origin relative paths are accepted for return_to.", "prompt_md": {"s": "H", "n": "safeNextPath accepts only '/' paths, rejects '//' and '/\\' (util.ts:200-203); parameter named 'next'"}, "spec_md": {"s": "P", "n": "util.rs:65-74 safe_return_to rejects absolute, //, backslash, control chars; applied at login and callback"}, "spec_dai": {"s": "P", "n": "util.rs:51-63 only '/...' not '//' or '/\\' accepted"}, "src": "/auth (Activity_19uonmy) dai:notes", "dag": false}, {"id": "G1", "t": "Callers authenticate with the session cookie or with Authorization: Bearer <moxy API key>.", "prompt_md": {"s": "P", "n": "resolve() accepts Authorization: Bearer (API key or JWT), X-API-Key, or session cookie (auth.ts:194-213)"}, "spec_md": {"s": "P", "n": "auth/mod.rs:385-393 authenticate_any: session cookie then Bearer API key"}, "spec_dai": {"s": "P", "n": "auth.rs:299-304 bearer API key then session cookie"}, "src": "/api (Activity_107p1xs) dai:notes, dai:authType=\"bearer\"", "dag": false}, {"id": "G2", "t": "GET /api/endpoints is anonymous and returns the same data as /.", "prompt_md": {"s": "H", "n": "No /api/endpoints; anonymous JSON discovery at /.well-known/moxy.json (pages.ts:52-99)"}, "spec_md": {"s": "P", "n": "handlers.rs:68-75 anonymous GET /api/endpoints, same data as root page (plus chat/provider/model flags)"}, "spec_dai": {"s": "P", "n": "api.rs:71-74 anonymous, same data as root page (+chat flag)"}, "src": "/api (Activity_107p1xs) dai:notes", "dag": false}, {"id": "G3", "t": "GET /api/me requires a user and returns the caller's identity and role.", "prompt_md": {"s": "H", "n": "Identity+roles at /auth/me (builtins/auth.ts:118-124), not /api/me"}, "spec_md": {"s": "P", "n": "handlers.rs:81-84, 221-244 identity + role (+csrf_token for sessions)"}, "spec_dai": {"s": "P", "n": "api.rs:75-95 requires user; returns sub/email/name/role (+csrfToken)"}, "src": "/api (Activity_107p1xs) dai:notes", "dag": false}, {"id": "G4", "t": "POST /api/chat requires a user. It takes the body {\"route\": \"<route path>\", \"messages\": [...]} and streams the reply as SSE.", "prompt_md": {"s": "H", "n": "OpenAI-compatible POST /api/v1/chat/completions with {model,messages} dispatched by model (api.ts:46-98); no {route} field; no user-role requirement beyond route middleware"}, "spec_md": {"s": "P", "n": "handlers.rs:85-89 require User; chat.rs ChatRequest{route,messages}; text/event-stream response"}, "spec_dai": {"s": "P", "n": "api.rs:96-100, chat.rs {route,messages} -> SSE"}, "src": "/api (Activity_107p1xs) dai:notes", "dag": false}, {"id": "G5", "t": "GET /api/config requires an admin and returns the current config as JSON.", "prompt_md": {"s": "H", "n": "No /api/config; admin-only /admin/api/routes and /admin/api/status return route/server info JSON (admin.ts:40-73)"}, "spec_md": {"s": "P", "n": "handlers.rs:90-93 admin; returns {status, config: doc} JSON"}, "spec_dai": {"s": "P", "n": "api.rs:101-105 admin; returns raw config JSON + version/lastError"}, "src": "/api (Activity_107p1xs) dai:notes", "dag": false}, {"id": "G6", "t": "PUT /api/config/routes, PUT /api/config/settings and PUT /api/config/routes/{path}/middleware require an admin. Each validates its input, then writes moxy.xml. Invalid input returns 422 with the validation errors.", "prompt_md": {"s": "F", "n": "No PUT config endpoints; moxy.xml never written"}, "spec_md": {"s": "H", "n": "handlers.rs:94-126 PUT /api/config/routes, /api/config/system, /api/config/middleware?path=; write_config validates -> 422 validation_failed with details — PARTIAL against spec.dai: paths are /api/config/system and /api/config/middleware?path= instead of /api/config/settings and /api/config/routes/{path}/middleware."}, "spec_dai": {"s": "P", "n": "api.rs:106-130,164-183 PUT /api/config/routes, /api/config/settings, /api/config/routes/{path}/middleware; validate+write; errors -> 422 validation_failed with details"}, "src": "/api (Activity_107p1xs) dai:notes", "dag": true}, {"id": "G7", "t": "GET /api/keys, POST /api/keys and DELETE /api/keys/{id} require an admin. The plaintext key is returned only once, by POST.", "prompt_md": {"s": "F", "n": "No /api/keys; keys only declared in moxy.xml or via CLI gen-key (cli.ts:66-71)"}, "spec_md": {"s": "P", "n": "handlers.rs:127-175 GET list, POST returns plaintext once (201), DELETE /api/keys/{id} (implemented as revoke, record kept with revoked=true)"}, "spec_dai": {"s": "P", "n": "api.rs:131-163 GET list, POST create 201 returns plaintext once, DELETE /api/keys/{id} (marks revoked)"}, "src": "/api (Activity_107p1xs) dai:notes", "dag": false}, {"id": "G8", "t": "Missing credentials return 401. An insufficient role returns 403.", "prompt_md": {"s": "P", "n": "401 when unauthenticated, 403 when role insufficient (admin.ts:32-37, access.ts:30-38)"}, "spec_md": {"s": "P", "n": "handlers.rs:23-29 no role -> 401, insufficient -> 403"}, "spec_dai": {"s": "P", "n": "api.rs:13-18 401 when no credentials, 403 when not admin"}, "src": "/api (Activity_107p1xs) dai:notes", "dag": false}, {"id": "G9", "t": "State-changing calls made with a session cookie must send X-CSRF-Token matching the session's csrfToken.", "prompt_md": {"s": "H", "n": "No X-CSRF-Token; CSRF mitigated by Origin-host check on unsafe cookie requests (auth.ts:207-208,234-244) and SameSite=Strict"}, "spec_md": {"s": "P", "n": "handlers.rs:32-41 non-GET/HEAD/OPTIONS session requests need X-CSRF-Token == session.csrf_token; applied to chat, config PUTs, keys POST/DELETE"}, "spec_dai": {"s": "P", "n": "api.rs:19-28 non-GET/HEAD/OPTIONS session requests require X-CSRF-Token == session csrf"}, "src": "/api (Activity_107p1xs) dai:notes; Session (Activity_0h0h53q) property csrfToken", "dag": false}, {"id": "H1", "t": "Each request is authenticated by the route's auth: none; api-key (Authorization: Bearer <moxy API key>, the default); or session (cookie). Failure returns 401.", "prompt_md": {"s": "H", "n": "Per-route auth only via optional <auth roles> middleware accepting any credential type (access.ts:12-41); routes are open by default; 401 on failure"}, "spec_md": {"s": "P", "n": "proxy.rs:259-303 none/api-key/session; failure -> 401 (with WWW-Authenticate: Bearer for api-key)"}, "spec_dai": {"s": "P", "n": "proxy.rs:158-172 none/api-key bearer/session cookie; failure -> 401"}, "src": "/* (Activity_1xahufv) dai:notes step 1, dai:authType=\"api-key\"", "dag": false}, {"id": "H2", "t": "The caller's Authorization header and Moxy session cookie are always removed before forwarding.", "prompt_md": {"s": "H", "n": "Session cookie always stripped (proxy.ts:129-131); Authorization only removed by <auth> middleware when a principal resolved (access.ts:26-29) -- otherwise forwarded upstream"}, "spec_md": {"s": "P", "n": "middleware/mod.rs:50-65 removes Authorization and moxy_session cookie before middleware; proxy.rs sync_headers sends only plan headers"}, "spec_dai": {"s": "P", "n": "proxy.rs:375-384 Authorization removed and moxy_session stripped from Cookie before header middleware runs"}, "src": "/* (Activity_1xahufv) dai:notes step 1", "dag": false}, {"id": "H3", "t": "After middleware, the part of the path matched by * is appended to the upstream URL and the query string is kept (/openai/chat/completions → https://api.openai.com/v1/chat/completions).", "prompt_md": {"s": "P", "n": "Middleware then forward; remainder appended to upstream URL, query preserved (proxy.ts:105-108,165; router.ts:65-70)"}, "spec_md": {"s": "P", "n": "middleware/mod.rs:85-122 then proxy forwards; lb.rs:98-109 base path + asterisk suffix + query preserved"}, "spec_dai": {"s": "P", "n": "pipeline.rs:104-215 then proxy.rs:369 target_path base path + '*' suffix + query preserved"}, "src": "/* (Activity_1xahufv) dai:notes steps 2–3", "dag": false}, {"id": "H4", "t": "All HTTP methods are proxied. Streaming responses (SSE, chunked) pass through without buffering, through the response phase.", "prompt_md": {"s": "P", "n": "Any method unless route 'methods' restricts (router.ts:56); responses piped unbuffered unless a buffering middleware and non-SSE (pipeline.ts:120-134,167-170)"}, "spec_md": {"s": "P", "n": "Pingora ProxyHttp proxies any method; response_body_filter (proxy.rs:693-720) passes chunks through without buffering"}, "spec_dai": {"s": "P", "n": "Pingora proxies all methods; response bodies streamed via response_body_filter (cache copy only, no buffering)"}, "src": "/* (Activity_1xahufv) dai:notes step 4", "dag": false}, {"id": "I1", "t": "The request phase runs in document order and the response phase in reverse. The first rejection stops the pipeline and the upstream is not called.", "prompt_md": {"s": "P", "n": "Request phase in order, stops on first Reply; response phase reverse over ran middleware; upstream skipped (pipeline.ts:79-91,138-146)"}, "spec_md": {"s": "P", "n": "middleware/mod.rs:85-123 document order, first Err returns before upstream; Route::response_header_ops (config/mod.rs:284-292) reverse order"}, "spec_dai": {"s": "P", "n": "pipeline.rs:120-213 request phase document order, first rejection returns Err before upstream; response header ops collected in reverse order"}, "src": "Middleware (Activity_0naucbp) dai:notes \"Order\"; decision Middleware order and rejection (Decision_mw)", "dag": false}, {"id": "I2", "t": "<headers> with <set name value>, <add name value> and <remove name> applies to the upstream request. The same children inside <response> change response headers.", "prompt_md": {"s": "H", "n": "<set-header>/<remove-header> with phase=request|response (transform.ts:20-63); no <headers> container, no 'add'"}, "spec_md": {"s": "P", "n": "config/mod.rs:312-326 set/add/remove on request headers; <response> header ops applied in proxy.rs:684-686"}, "spec_dai": {"s": "P", "n": "proxy.rs:253-281 set/add/remove on upstream request; <response> header ops applied in response_filter"}, "src": "Middleware (Activity_0naucbp) dai:notes \"headers\", \"response\"", "dag": false}, {"id": "I3", "t": "<request><rewrite-path from to/> rewrites the path.", "prompt_md": {"s": "H", "n": "<rewrite-path from to> (regex) as standalone middleware (transform.ts:66-77), not under <request>"}, "spec_md": {"s": "P", "n": "middleware/mod.rs:95-99 rewrite-path from->to prefix replace (applied to the forwarded suffix)"}, "spec_dai": {"s": "P", "n": "pipeline.rs:86-102,126-130 rewrite-path on the forwarded path"}, "src": "Middleware (Activity_0naucbp) dai:notes \"request\"", "dag": false}, {"id": "I4", "t": "<request><max-body-size bytes/> returns 413 when exceeded.", "prompt_md": {"s": "H", "n": "<body-limit max> -> 413 payload_too_large (access.ts:170-179); different element/attr"}, "spec_md": {"s": "H", "n": "middleware/mod.rs:100-104 Content-Length > limit -> 413 payload_too_large; chunked bodies enforced in proxy.rs:598-610 — normalised to PARTIAL: chunked bodies are cut mid-stream after the upstream is contacted, same as spec_dai."}, "spec_dai": {"s": "H", "n": "pipeline.rs:131-137 413 via Content-Length before upstream; for chunked/no-length bodies the limit is enforced mid-stream (proxy.rs:410-416) after the upstream has already been contacted"}, "src": "Middleware (Activity_0naucbp) dai:notes \"request\"", "dag": false}, {"id": "I5", "t": "<request><timeout duration/> defaults to 60s and returns 504 when exceeded.", "prompt_md": {"s": "H", "n": "<timeout value> (transform.ts:79-88); default 120s not 60s (proxy.ts:8); 504 upstream_timeout (proxy.ts:218-219)"}, "spec_md": {"s": "P", "n": "config DEFAULT_TIMEOUT 60s; proxy.rs:523-526 peer read/write timeouts; ReadTimedout -> 504 upstream_timeout (proxy.rs:209-211). Timeout is per-read idle, not total"}, "spec_dai": {"s": "P", "n": "resolve.rs:15 default 60s; proxy.rs:352-355 peer timeouts -> 504 upstream_timeout (map_error)"}, "src": "Middleware (Activity_0naucbp) dai:notes \"request\"", "dag": false}, {"id": "I6", "t": "<response><cache ttl/> enables the cache.", "prompt_md": {"s": "H", "n": "<cache ttl> is a standalone middleware (cache.ts:22), not inside <response>"}, "spec_md": {"s": "P", "n": "xml.rs:259-264 <cache ttl>; config cache_ttl() enables cache in proxy.rs:364"}, "spec_dai": {"s": "P", "n": "parse.rs:264, pipeline.rs:144-146 <response><cache ttl>"}, "src": "Middleware (Activity_0naucbp) dai:notes \"response\"; Cache (Activity_0z98u12)", "dag": false}, {"id": "I7", "t": "<load-balance strategy=\"round-robin | random | failover\"> contains two or more <upstream url> and replaces a single <upstream>. An upstream that errors or times out is skipped for 30 s.", "prompt_md": {"s": "H", "n": "Route strategy attr failover|round-robin|random with weights (config.ts:439-442, proxy.ts:83-103); no <load-balance>; down after 2 failures for 15s and deprioritised, not skipped 30s (proxy.ts:49)"}, "spec_md": {"s": "P", "n": "config/mod.rs:964-986 strategies + >=2 upstreams; lb.rs:12,25-85 failed upstream skipped 30s; marked on connect fail, 5xx, timeouts"}, "spec_dai": {"s": "H", "n": "state.rs:256-318 round-robin/random/failover, >=2 validated, 30s skip; but only connect failures/timeouts mark an upstream down (proxy.rs:524-551) - upstream HTTP error responses (5xx) do not"}, "src": "Middleware (Activity_0naucbp) dai:notes \"load balancing\"; model2 url (Activity_0hb5etj)", "dag": false}, {"id": "I8", "t": "<ai provider=\"openai | anthropic | ollama\" model> parses provider bodies to rewrite the model and count token usage. It is required by <token-budget> and for a route to appear in /chat.", "prompt_md": {"s": "H", "n": "No <ai provider model>; model aliasing via <models><model upstream-model> (pipeline.ts:57-65) and generic usage scanning (usage.ts)"}, "spec_md": {"s": "P", "n": "middleware/ai.rs:18-55 model override rewrite; UsageTracker counts openai/anthropic/ollama usage; observer in proxy.rs:679-683"}, "spec_dai": {"s": "P", "n": "ai.rs rewrite_request sets model; UsageTracker counts usage for openai/anthropic/ollama (buffered and streamed)"}, "src": "Middleware (Activity_0naucbp) dai:notes \"ai related\"", "dag": false}, {"id": "I9", "t": "<rate-limit requests per=\"1s | 1m | 1h\" key=\"api-key | user | ip\"> keeps counters in memory (reset on restart). Rejection is 429 with Retry-After and type rate_limited.", "prompt_md": {"s": "H", "n": "<rate-limit requests window key=principal|ip|route|global|header:X> in memory; 429 + Retry-After + code rate_limited (access.ts:92-121); 'window' instead of 'per', type in 'code'"}, "spec_md": {"s": "P", "n": "ratelimit.rs in-memory fixed window, 1s/1m/1h, key api-key|user|ip; 429 rate_limited + Retry-After"}, "spec_dai": {"s": "P", "n": "state.rs:222-247 in-memory fixed window; pipeline.rs:150-169 429 rate_limited + Retry-After; key api-key|user|ip; per 1s|1m|1h validated"}, "src": "Middleware (Activity_0naucbp) dai:notes \"rate limit\"", "dag": false}, {"id": "I10", "t": "<token-budget tokens per=\"1h | 1d | 30d\" key=\"api-key | user\"> counts usage from upstream responses and stores it in the KV store. Rejection is 429 with Retry-After and type token_budget_exceeded.", "prompt_md": {"s": "H", "n": "<quota tokens window key> in memory (not KV), 429 + Retry-After + quota_exceeded (access.ts:124-167); no <ai> requirement"}, "spec_md": {"s": "P", "n": "budget.rs usage in KV, 1h/1d/30d, key api-key|user; 429 token_budget_exceeded + Retry-After; config/mod.rs:948 requires <ai>"}, "spec_dai": {"s": "P", "n": "pipeline.rs:170-201,218-238 usage#<key>#<route>#<start> in KV; 429 token_budget_exceeded + Retry-After; resolve.rs:668 requires <ai>"}, "src": "Middleware (Activity_0naucbp) dai:notes \"token spend\"", "dag": false}, {"id": "I11", "t": "A connection failure returns 502 upstream_unavailable. A timeout returns 504 upstream_timeout. Upstream HTTP error responses pass through unchanged.", "prompt_md": {"s": "H", "n": "502 upstream_unavailable / 504 upstream_timeout in 'code' (proxy.ts:216-220); upstream errors passed through but 502/503/504 retried on other upstreams by default (config.ts:473)"}, "spec_md": {"s": "P", "n": "proxy.rs:189-227 connect errors -> 502 upstream_unavailable, timeouts -> 504 upstream_timeout; upstream HTTP errors passed through (only mark LB failure); chat.rs:173-187 same"}, "spec_dai": {"s": "P", "n": "proxy.rs:124-142 connect failure 502 upstream_unavailable, timeouts 504 upstream_timeout; upstream HTTP responses passed through"}, "src": "Middleware (Activity_0naucbp) dai:notes \"Upstream errors\"", "dag": false}, {"id": "J1", "t": "One embedded redb store in a single file, $MOXY_DATA_DIR/moxy.redb, with one table, accessed through a KvStore trait.", "prompt_md": {"s": "F", "n": "No KvStore, no redb, no moxy.redb"}, "spec_md": {"s": "P", "n": "kv.rs:22-42 KvStore trait; RedbStore single table 'moxy' in moxy.redb in data dir"}, "spec_dai": {"s": "P", "n": "store.rs:17-32 KvStore trait, RedbStore single table 'moxy', file data_dir/moxy.redb (server.rs:73)"}, "src": "KV Store (DataStoreReference_0h9ku2u) dai:notes; decision Single Table Design (Decision_std)", "dag": false}, {"id": "J2", "t": "Key formats: user#<sub>, session#<id>, auth#state#<state>, apikey#<sha256>, cache#<sha256>, usage#<api-key id | user sub>#<route path>#<window start>.", "prompt_md": {"s": "F", "n": "No KV key scheme"}, "spec_md": {"s": "P", "n": "auth/mod.rs:24-35 user#/session#/auth#state#/apikey#<sha256>; cache.rs:79-100 cache#<sha256>; budget.rs:17-19 usage#<id>#<route>#<start>"}, "spec_dai": {"s": "P", "n": "user#, session#, auth#state#, apikey#<sha256>, cache#<sha256>, usage#<id|sub>#<route>#<start> (auth.rs, pipeline.rs)"}, "src": "KV Store (DataStoreReference_0h9ku2u) dai:notes", "dag": false}, {"id": "J3", "t": "Every value is JSON and carries an optional expiresAt. Expired entries are ignored on read and deleted by a sweep every 10 min. Rate-limit counters are not stored.", "prompt_md": {"s": "F", "n": "No persisted values/expiry sweep; rate limits in memory (as spec) but everything else too"}, "spec_md": {"s": "H", "n": "kv.rs Envelope{v,exp}, expired filtered on read; state.rs:320-328 sweep every 600s; rate limits in memory — PARTIAL against spec.dai: value envelope is {v, exp} (unix ms) instead of a JSON value carrying expiresAt."}, "spec_dai": {"s": "P", "n": "store.rs:34-43 expiresAt ignored on read; server.rs:19,88-103 sweep every 600s; rate limits in memory"}, "src": "KV Store (DataStoreReference_0h9ku2u) dai:notes", "dag": true}, {"id": "J4", "t": "The login-state record auth#state#<state> is {nonce, pkceVerifier, returnTo, expiresAt}. It is created by /auth/login, deleted on callback, and expires after 10 min.", "prompt_md": {"s": "F", "n": "No login state record"}, "spec_md": {"s": "H", "n": "auth/mod.rs:91-97 LoginState{nonce,pkce_verifier,return_to,expires_at}; 10 min TTL; oidc.rs:213 kv.take deletes on callback — PARTIAL against spec.dai: fields are snake_case (pkce_verifier, return_to, expires_at) instead of pkceVerifier, returnTo, expiresAt."}, "spec_dai": {"s": "P", "n": "auth.rs:104-111,441-450 nonce, pkce verifier, return_to, expires 10 min; deleted at callback (auth.rs:467)"}, "src": "Auth (Activity_12436hi) dai:notes", "dag": true}, {"id": "J5", "t": "API keys look like moxy_<32 random base64url chars>, and only the SHA-256 hash is stored. The record is {id, name, ownerSub, createdAt, lastUsedAt, revoked}.", "prompt_md": {"s": "H", "n": "Format moxy_ + base64url(24 bytes)=32 chars (auth.ts:68-70), SHA-256 hex lookup (auth.ts:64-66,183-187); keys defined in moxy.xml (plaintext 'key' allowed), no id/owner/created/last-used/revoked record"}, "spec_md": {"s": "H", "n": "auth/mod.rs:220-242 moxy_ + random_token(24) = 32 b64url chars; only sha256 hex stored; record id/name/owner/created/last_used/revoked — PARTIAL against spec.dai: record fields are owner, created_at, last_used_at instead of ownerSub, createdAt, lastUsedAt."}, "spec_dai": {"s": "P", "n": "auth.rs:142-158 moxy_ + base64url(24 bytes)=32 chars; only sha256 stored; id,name,owner,created,lastUsed,revoked"}, "src": "Auth (Activity_12436hi) dai:notes", "dag": true}, {"id": "J6", "t": "Session model: the id is 32 random bytes, base64url-encoded. Properties are id: str, userSub: str, csrfToken: str, createdAt: datetime, expiresAt: datetime.", "prompt_md": {"s": "F", "n": "Session is stateless HS256 JWT (auth.ts:149-177); no random 32-byte id, no csrf token, no server-side record"}, "spec_md": {"s": "H", "n": "auth/mod.rs:144-160 id = 32 random bytes b64url; record id/subject/csrf_token/created_at/expires_at (+refreshed_at) — PARTIAL against spec.dai: record fields are subject, csrf_token, created_at, expires_at instead of userSub, csrfToken, createdAt, expiresAt."}, "spec_dai": {"s": "P", "n": "auth.rs:341-347 id = random_b64(32); record id,userSub,csrf,created,expires"}, "src": "Session (Activity_0h0h53q) dai:notes, dai:properties", "dag": true}, {"id": "J7", "t": "Cookie moxy_session=<id>; HttpOnly; SameSite=Lax; Path=/, plus Secure unless bound to 127.0.0.1 or localhost.", "prompt_md": {"s": "H", "n": "Cookie moxy_session (configurable), HttpOnly, Path=/, but SameSite=Strict and Secure only when request is HTTPS (builtins/auth.ts:6-8)"}, "spec_md": {"s": "P", "n": "auth/mod.rs:186-195 HttpOnly; SameSite=Lax; Path=/; Secure unless host is 127.0.0.1/localhost (config/mod.rs:79-81)"}, "spec_dai": {"s": "P", "n": "auth.rs:306-315 HttpOnly; SameSite=Lax; Path=/; Secure unless host 127.0.0.1/localhost/::1"}, "src": "Session (Activity_0h0h53q) dai:notes", "dag": false}, {"id": "J8", "t": "The session lifetime is <auth session-ttl> (default 24h) and slides: any authenticated request more than 1 h after the last refresh extends expiresAt.", "prompt_md": {"s": "H", "n": "token-ttl default 12h (config.ts:268), fixed expiry, no sliding refresh"}, "spec_md": {"s": "H", "n": "Default 24h and server-side sliding refresh (auth/mod.rs:163-178) present, but the cookie is issued once with Max-Age=ttl (signin.rs:112-115) and never re-issued on refresh, so the browser drops the cookie at login+ttl regardless of activity"}, "spec_dai": {"s": "H", "n": "auth.rs:261-273 server-side expiry extended when >1h since refresh, default 24h; but cookie Max-Age is fixed at sign-in and never re-issued, so the browser drops the cookie at the original TTL and sliding is ineffective"}, "src": "Session (Activity_0h0h53q) dai:notes", "dag": false}, {"id": "J9", "t": "User model: properties are sub: str, email: str, name: str, role: str, createdAt: datetime, lastLoginAt: datetime. The record is created on first login and updated on every login.", "prompt_md": {"s": "F", "n": "No user records; users are static <user> entries in moxy.xml"}, "spec_md": {"s": "H", "n": "auth/mod.rs:70-77, 115-134 subject/email/name/role/created_at/last_login_at; created_at kept on update — PARTIAL against spec.dai: record fields are subject, created_at, last_login_at instead of sub, createdAt, lastLoginAt."}, "spec_dai": {"s": "P", "n": "auth.rs:76-88,319-339 sub,email,name,role,createdAt,lastLoginAt; created on first sign-in, created_at preserved after"}, "src": "Users (Activity_06ixee5) dai:notes, dai:properties", "dag": true}, {"id": "J10", "t": "The role is computed at login from <auth><admin email> and stored. It is re-checked against the current config on every request.", "prompt_md": {"s": "H", "n": "Roles re-derived from current config on every request via lookupSubject (auth.ts:174-176,215-226) so admin changes apply immediately; roles not computed/stored at sign-in, generic roles not admin email list"}, "spec_md": {"s": "P", "n": "signin.rs:101 role at sign-in stored; auth/mod.rs:376 Role::for_email recomputed from current config on every request"}, "spec_dai": {"s": "P", "n": "auth.rs:132-138 role computed at sign-in and recomputed against active config in authenticate_session/api_key (adds email_verified condition)"}, "src": "Users (Activity_06ixee5) dai:notes; decision Roles and API keys (Decision_authz)", "dag": false}, {"id": "K1", "t": "The cache is off by default and enabled per route with <cache ttl> inside <response>.", "prompt_md": {"s": "H", "n": "Off by default, enabled per route by <cache ttl> middleware (cache.ts:22), not <response><cache>"}, "spec_md": {"s": "P", "n": "cache only when route.cache_ttl() is Some (proxy.rs:364)"}, "spec_dai": {"s": "P", "n": "pipeline.rs:390-397 only when route.cache_ttl set"}, "src": "Cache (Activity_0z98u12) dai:notes; decision Cache policy (Decision_cache)", "dag": false}, {"id": "K2", "t": "Cached: 200 responses to GET, and 200 non-streamed responses to POST on routes with <ai>. Not cached: streamed responses, requests with Cache-Control: no-cache, responses with Cache-Control: no-store or private.", "prompt_md": {"s": "H", "n": "Stores 200 GET and POST on any route (methods default GET,POST, cache.ts:27); skips stream:true and SSE; skips request no-cache/no-store; never stores no-store/private (cache.ts:35-63)"}, "spec_md": {"s": "P", "n": "proxy.rs:370-372 GET, or POST on <ai> route when not stream; cache.rs:117-130 request no-cache bypass, only 200, not streamed, no no-store/private"}, "spec_dai": {"s": "P", "n": "pipeline.rs:390-408 GET, POST only on <ai> routes, status 200, not streamed, skip request no-cache, never store no-store/private"}, "src": "Cache (Activity_0z98u12) dai:notes", "dag": false}, {"id": "K3", "t": "The key is cache#<sha256 of route path + method + upstream URL + normalised body + caller key>.", "prompt_md": {"s": "H", "n": "SHA-256 over route id, method, upstream path, query, principal id or IP, raw body (cache.ts:38-43); not upstream URL, body not normalised"}, "spec_md": {"s": "P", "n": "cache.rs:79-100 sha256 over route, method, upstream URL, canonicalised JSON body, caller identity (for load-balance routes the 'upstream URL' is all upstream URLs joined)"}, "spec_dai": {"s": "P", "n": "pipeline.rs:341-357 sha256(route path, method, upstream url, normalised JSON body, caller key); note: always uses first upstream URL for load-balanced routes"}, "src": "Cache (Activity_0z98u12) dai:notes", "dag": false}, {"id": "K4", "t": "Entries expire after ttl. All of a route's entries are dropped when that route changes in moxy.xml.", "prompt_md": {"s": "P", "n": "Entries expire after ttl (cache.ts:46,67); in-memory caches rebuilt on any reload so changed routes lose entries (runtime.ts:32-36)"}, "spec_md": {"s": "P", "n": "cache.rs:153-154 expiry = ttl; state.rs:186-202 purges entries of routes whose RouteDoc changed or disappeared on reload"}, "spec_dai": {"s": "P", "n": "cache entries carry expiresAt=ttl; state.rs:151-170 drop cache entries of routes whose fingerprint changed"}, "src": "Cache (Activity_0z98u12) dai:notes", "dag": false}]};
+const V = [
+  { k: "prompt_md", c: "--s-prompt", cls: "c-prompt", input: "prompt.md · 1 paragraph", cost: 6.7742, out: 195057, think: 54159, cr: 8819267, cw: 221679, wall: "32m 11s", wallS: 1931, api: "26m 53s", apiS: 1613, msgs: 157, tools: 74, added: 6846, loc: 5934, tests: 155, stack: "TypeScript · Node" },
+  { k: "spec_md", c: "--s-specmd", cls: "c-specmd", input: "spec.md · 205 lines", cost: 11.3108, out: 252675, think: 73315, cr: 22721778, cw: 342423, wall: "40m 28s", wallS: 2428, api: "34m 26s", apiS: 2066, msgs: 227, tools: 111, added: 9932, loc: 10836, tests: 83, stack: "Rust · Pingora · SvelteKit" },
+  { k: "spec_dai", c: "--s-specdai", cls: "c-specdai", input: "spec.dai · 555 lines", cost: 8.1728, out: 196125, think: 54138, cr: 14268717, cw: 279195, wall: "33m 58s", wallS: 2038, api: "26m 38s", apiS: 1598, msgs: 164, tools: 91, added: 8311, loc: 8212, tests: 47, stack: "Rust · Pingora · SvelteKit" },
+];
+const N = DATA.items.length;
+V.forEach(v => {
+  v.P = DATA.items.filter(i => i[v.k].s === "P").length;
+  v.H = DATA.items.filter(i => i[v.k].s === "H").length;
+  v.F = DATA.items.filter(i => i[v.k].s === "F").length;
+  v.score = v.P + v.H * 0.5;
+  v.acc = v.score / N * 100;
+});
+const $ = id => document.getElementById(id);
+const fmt = n => n.toLocaleString("en-US");
+const money = n => "$" + n.toFixed(2);
+
+// Cards
+$("cards").innerHTML = V.map(v => `
+  <div class="card">
+    <div class="card-h"><span class="name"><span class="dot ${v.cls}"></span>${v.k}</span><span class="input">${v.input}</span></div>
+    <div class="figs">
+      <div class="fig"><div class="v">${v.acc.toFixed(1)}%</div><div class="l">accuracy</div></div>
+      <div class="fig"><div class="v">${money(v.cost)}</div><div class="l">session cost</div></div>
+    </div>
+    <div class="stackwrap">
+      <div class="stack" role="img" aria-label="${v.P} pass, ${v.H} partial, ${v.F} fail">
+        ${["P","H","F"].filter(s => v[s]).map(s => `<span class="s-${s}" style="flex:${v[s]}"></span>`).join("")}
+      </div>
+      <div class="stacklabel num">${v.P} pass · ${v.H} partial · ${v.F} fail</div>
+    </div>
+    <div class="sub">${v.stack} · ${v.wall} · ${fmt(v.loc)} source lines</div>
+  </div>`).join("");
+
+// Derived table
+const derived = [
+  ["Accuracy (weighted)", v => v.acc.toFixed(1) + "%", "max", v => v.acc],
+  ["Strict pass rate", v => (v.P / N * 100).toFixed(1) + "%", "max", v => v.P],
+  ["Cost per accuracy point", v => money(v.cost / v.acc), "min", v => v.cost / v.acc],
+  ["Cost per passed item", v => money(v.cost / v.P), "min", v => v.cost / v.P],
+  ["Cost relative to spec_md", v => Math.round(v.cost / V[1].cost * 100) + "%", "min", v => v.cost],
+];
+function rowsFor(list) {
+  return list.map(r => {
+    if (r.group) return `<tr class="group"><td colspan="4">${r.group}</td></tr>`;
+    const [label, f, best, key] = r;
+    const vals = V.map(key || (() => 0));
+    const target = best === "max" ? Math.max(...vals) : best === "min" ? Math.min(...vals) : null;
+    return `<tr><td>${label}</td>${V.map((v, i) => `<td class="n${target !== null && vals[i] === target ? " best" : ""}">${f(v)}</td>`).join("")}</tr>`;
+  }).join("");
+}
+$("derived").innerHTML = rowsFor(derived);
+
+$("cost").innerHTML = rowsFor([
+  { group: "Spend" },
+  ["Session cost (USD)", v => money(v.cost), "min", v => v.cost],
+  ["Output tokens", v => fmt(v.out), "min", v => v.out],
+  ["  of which thinking", v => fmt(v.think), "min", v => v.think],
+  ["Cache read tokens", v => fmt(v.cr), "min", v => v.cr],
+  ["Cache write tokens", v => fmt(v.cw), "min", v => v.cw],
+  { group: "Time and activity" },
+  ["Wall-clock", v => v.wall, "min", v => v.wallS],
+  ["API time", v => v.api, "min", v => v.apiS],
+  ["Assistant turns", v => v.msgs, "min", v => v.msgs],
+  ["Tool calls", v => v.tools, "min", v => v.tools],
+  { group: "Output" },
+  ["Lines added", v => fmt(v.added)],
+  ["Source lines (incl. tests)", v => fmt(v.loc)],
+  ["Tests (all passing)", v => v.tests],
+]);
+
+// Heat table
+const heat0 = () => getComputedStyle(document.documentElement);
+function heat() {
+  $("heat").innerHTML = Object.entries(DATA.secs).map(([s, name]) => {
+    const its = DATA.items.filter(i => i.id[0] === s);
+    const cells = V.map(v => {
+      const sc = its.reduce((a, i) => a + (i[v.k].s === "P" ? 1 : i[v.k].s === "H" ? .5 : 0), 0);
+      const pct = sc / its.length;
+      const bg = `color-mix(in oklab, var(--heat-1) ${Math.round(pct * 85)}%, var(--heat-0))`;
+      const fg = pct > 0.55 ? "var(--bg)" : "var(--ink)";
+      return `<td class="cell" style="background:${bg};color:${fg}">${sc % 1 ? sc.toFixed(1) : sc} / ${its.length}</td>`;
+    }).join("");
+    return `<tr><td><span class="mono" style="color:var(--ink-3)">${s}</span>&nbsp; ${name}</td><td class="n">${its.length}</td>${cells}</tr>`;
+  }).join("") + `<tr><td><strong>Total</strong></td><td class="n">${N}</td>${V.map(v => `<td class="cell"><strong>${v.score % 1 ? v.score.toFixed(1) : v.score}</strong> / ${N}</td>`).join("")}</tr>`;
+}
+heat();
+
+// Ledger
+const SL = { P: "pass", H: "partial", F: "fail" };
+const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function ledger(mode) {
+  const rows = DATA.items.filter(i =>
+    mode === "diff" ? i.spec_md.s !== i.spec_dai.s :
+    mode === "nonpass" ? (i.spec_md.s !== "P" || i.spec_dai.s !== "P") : true);
+  $("ledger").innerHTML = rows.map(i => `
+    <tr>
+      <td class="id">${i.id}</td>
+      <td class="req">${esc(i.t)}${i.dag ? ' <span title="spec.dai is more exact than spec.md here" style="color:var(--accent)">†</span>' : ""}
+        <div class="src">${esc(i.src)}</div>
+        <details><summary>evidence</summary><div class="ev">${V.map(v => `<div><b>${v.k}</b> · ${esc(i[v.k].n)}</div>`).join("")}</div></details>
+      </td>
+      ${V.map(v => `<td><span class="chip"><i class="s-${i[v.k].s}"></i>${SL[i[v.k].s]}</span></td>`).join("")}
+    </tr>`).join("");
+}
+ledger("all");
+[["f-all","all"],["f-diff","diff"],["f-nonpass","nonpass"]].forEach(([id, m]) => {
+  $(id).addEventListener("click", () => {
+    document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", String(b.id === id)));
+    ledger(m);
+  });
+});
+
+// Scatter
+(function scatter() {
+  const svg = $("scatter"), W = 560, H = 360, m = { l: 52, r: 24, t: 20, b: 46 };
+  const x0 = 6, x1 = 12, y0 = 30, y1 = 100;
+  const sx = c => m.l + (c - x0) / (x1 - x0) * (W - m.l - m.r);
+  const sy = a => H - m.b - (a - y0) / (y1 - y0) * (H - m.t - m.b);
+  let g = `<g class="axis">`;
+  for (let a = 30; a <= 100; a += 10) g += `<line class="grid" x1="${m.l}" x2="${W - m.r}" y1="${sy(a)}" y2="${sy(a)}"/><text x="${m.l - 8}" y="${sy(a) + 4}" text-anchor="end">${a}%</text>`;
+  for (let c = 6; c <= 12; c += 1) g += `<text x="${sx(c)}" y="${H - m.b + 18}" text-anchor="middle">$${c}</text>`;
+  g += `<line class="base" x1="${m.l}" x2="${W - m.r}" y1="${H - m.b}" y2="${H - m.b}"/>`;
+  g += `<text x="${(m.l + W - m.r) / 2}" y="${H - 6}" text-anchor="middle">session cost (USD)</text>`;
+  g += `<text transform="translate(12 ${(m.t + H - m.b) / 2}) rotate(-90)" text-anchor="middle">accuracy</text></g>`;
+  const place = { prompt_md: [12, -4, "start"], spec_md: [-14, -4, "end"], spec_dai: [12, 22, "start"] };
+  g += V.map((v, i) => {
+    const [dx, dy, an] = place[v.k], cx = sx(v.cost), cy = sy(v.acc);
+    return `<g class="pt" data-i="${i}" tabindex="0" style="cursor:default">
+      <circle cx="${cx}" cy="${cy}" r="18" fill="transparent"/>
+      <circle class="mk" cx="${cx}" cy="${cy}" r="7" fill="var(${v.c})" stroke="var(--surface)" stroke-width="2"/>
+      <text class="pt-label" x="${cx + dx}" y="${cy + dy}" text-anchor="${an}">${v.k}</text>
+      <text class="pt-sub" x="${cx + dx}" y="${cy + dy + 14}" text-anchor="${an}">${money(v.cost)} · ${v.acc.toFixed(1)}%</text>
+    </g>`;
+  }).join("");
+  svg.innerHTML = g;
+  const box = $("scatter-box"), tip = document.createElement("div");
+  tip.className = "tip"; tip.hidden = true; box.appendChild(tip);
+  svg.querySelectorAll(".pt").forEach(el => {
+    const v = V[+el.dataset.i];
+    const show = () => {
+      const c = el.querySelector(".mk"), r = svg.getBoundingClientRect(), k = r.width / W;
+      tip.innerHTML = `<b>${v.k}</b><br>${money(v.cost)} · ${v.acc.toFixed(1)}% weighted<br>${v.P} pass · ${v.H} partial · ${v.F} fail<br>${money(v.cost / v.acc)} per accuracy point`;
+      tip.style.left = (16 + c.cx.baseVal.value * k) + "px";
+      tip.style.top = (16 + c.cy.baseVal.value * k) + "px";
+      tip.hidden = false; c.setAttribute("r", 9);
+    };
+    const hide = () => { tip.hidden = true; el.querySelector(".mk").setAttribute("r", 7); };
+    el.addEventListener("mouseenter", show); el.addEventListener("mouseleave", hide);
+    el.addEventListener("focus", show); el.addEventListener("blur", hide);
+  });
+})();
+</script>

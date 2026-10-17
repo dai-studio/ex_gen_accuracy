@@ -1,0 +1,6 @@
+/target
+/data
+/moxy.xml
+/ui/node_modules
+/ui/.svelte-kit
+/.inspect

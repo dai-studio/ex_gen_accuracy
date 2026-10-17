@@ -1,0 +1,555 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:dai="https://dai.studio/schema/dai/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_1" name="moxy" targetNamespace="https://dai.studio/workflow">
+  <bpmn:process id="Process_1" name="moxy" isExecutable="false">
+    <bpmn:extensionElements>
+      <dai:workflowMeta description="Moxy: a locally run gateway server written in Rust that sits between callers (developers, admins and AI agents) and one or more AI model endpoints. It loads its routes from moxy.xml (Moxy Markup Language), applies per-route middleware to requests and responses, and forwards traffic to configured upstream URLs. It also serves built-in routes for endpoint discovery (/), a chat UI (/chat), administration (/admin), authentication (/auth) and a JSON API (/api). Persistent state lives in one embedded key-value store organised with Single Table Design. Decisions taken to remove ambiguity from v0.1.0 are recorded in the &#39;decisions&#39; and &#39;assumptions&#39; containers." targetLanguage="Rust" targetFramework="Pingora (proxy), SvelteKit (web UI)" version="0.1.0">
+        <dai:taskTypeEntry stepType="" description="A generic work item or activity in the process flow." />
+        <dai:taskTypeEntry type="dai.types.software.dependency" stepType="dependency" description="An external library, toolchain or package Moxy is built with, with its version policy, license and purpose." />
+        <dai:taskTypeEntry type="dai.types.product.persona" stepType="persona" description="A kind of caller of the Moxy server (developer, admin, agent), with its role, goals and how it authenticates." />
+        <dai:taskTypeEntry type="dai.types.software.service" stepType="service" description="The running Moxy server process and its startup, shutdown and error conventions." />
+        <dai:taskTypeEntry type="dai.types.software.api-endpoint" stepType="api-endpoint" description="A route Moxy exposes: method, path, required auth and behaviour." />
+        <dai:taskTypeEntry type="dai.types.software.model" stepType="model" description="A record stored in the KV store: its fields and key format." />
+        <dai:taskTypeEntry type="dai.types.software.decision" description="A design decision that resolves an ambiguity in the original spec. Proposed = awaiting owner confirmation." />
+        <dai:taskTypeEntry type="dai.types.business.assumption" stepType="assumption" description="An interpretation of the original author&#39;s intent that the spec relies on." />
+      </dai:workflowMeta>
+    </bpmn:extensionElements>
+    <bpmn:subProcess id="Activity_0wz4xd1" name="dependencies">
+      <bpmn:task id="Activity_0n9lc1t" name="rust" dai:type="dai.types.software.dependency" dai:stepType="dependency" dai:version="stable toolchain, edition 2024" dai:package="https://www.rust-lang.org" dai:dependencyType="dev" dai:license="MIT OR Apache-2.0" dai:purpose="Implementation language and toolchain for the server." />
+      <bpmn:task id="Activity_1nafjvj" name="pingora" dai:type="dai.types.software.dependency" dai:stepType="dependency" dai:version="latest stable release, pinned in Cargo.lock" dai:package="https://github.com/cloudflare/pingora" dai:dependencyType="runtime" dai:license="Apache-2.0" dai:purpose="HTTP proxy framework: listener, routing to upstreams, load balancing, streaming." />
+      <bpmn:task id="Activity_09jmudl" name="sveltekit" dai:type="dai.types.software.dependency" dai:stepType="dependency" dai:notes="Built with adapter-static as a single-page app. The build output is embedded in the Rust binary and served by Moxy under /_app/*, so no Node.js runtime is needed. The UI gets all data from /api." dai:version="latest stable release, pinned in package-lock.json" dai:package="https://github.com/sveltejs/kit" dai:dependencyType="runtime" dai:license="MIT" dai:purpose="Builds the web UI for /, /chat and /admin." />
+      <bpmn:task id="Activity_redb001" name="redb" dai:type="dai.types.software.dependency" dai:stepType="dependency" dai:version="latest stable release, pinned in Cargo.lock" dai:package="https://github.com/cberner/redb" dai:dependencyType="runtime" dai:license="MIT OR Apache-2.0" dai:purpose="Embedded key-value engine behind the KV Store." />
+    </bpmn:subProcess>
+    <bpmn:subProcess id="Activity_1mpy4pg" name="server">
+      <bpmn:task id="Activity_0k3fev3" name="serve" dai:type="dai.types.software.service" dai:stepType="service" dai:notes="The single Moxy server process. Owns the route table, middleware pipeline, sessions, users, auth and cache.&#10;&#10;Startup sequence (in order):&#10;1. Read environment variables (see &#39;environment variables&#39;).&#10;2. Load and validate moxy.xml from $MOXY_CONFIG. If the file is missing or invalid, log the error and exit with a non-zero status.&#10;3. Open the KV store in $MOXY_DATA_DIR.&#10;4. Bind to the host and port from &#60;server host port&#62; in moxy.xml (default 127.0.0.1:8080).&#10;5. Start watching moxy.xml for changes.&#10;&#10;Shutdown: on SIGINT/SIGTERM stop accepting connections, let in-flight requests finish (max 30 s), close the KV store.&#10;&#10;All errors returned by Moxy itself (not by an upstream) use the JSON body {&#34;error&#34;: {&#34;type&#34;: &#34;&#60;snake_case_type&#62;&#34;, &#34;message&#34;: &#34;&#60;human readable&#62;&#34;}}." dai:version="0.2.0" dai:authType="api-key" dai:baseUrl="http://127.0.0.1:8080">
+        <bpmn:incoming>Flow_02ybsg7</bpmn:incoming>
+        <bpmn:incoming>Flow_0z4xe6m</bpmn:incoming>
+        <bpmn:incoming>Flow_14awy32</bpmn:incoming>
+        <bpmn:outgoing>Flow_0u8tt3y</bpmn:outgoing>
+        <bpmn:outgoing>Flow_1fyzgyi</bpmn:outgoing>
+        <bpmn:outgoing>Flow_1swv0ri</bpmn:outgoing>
+        <bpmn:outgoing>Flow_1icwk2u</bpmn:outgoing>
+        <bpmn:outgoing>Flow_1sfexq3</bpmn:outgoing>
+        <bpmn:outgoing>Flow_1gm2pxl</bpmn:outgoing>
+        <bpmn:outgoing>Flow_0hqw7el</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="Activity_0q42btx" name="moxy.xml&#10;(config)" dai:notes="The single source of truth for server configuration. Path: $MOXY_CONFIG (default ./moxy.xml). Format: Moxy Markup Language (MML), an XML vocabulary.&#10;&#10;Lifecycle:&#10;- Loaded on start; the server refuses to start if it is invalid.&#10;- Watched for changes. On change (debounced 500 ms) it is parsed and validated; if valid, the new config is swapped in atomically and new requests use it while in-flight requests finish on the old one. If invalid, the previous config stays active and the error is logged and shown in /admin.&#10;- /admin edits are written back to this file (validate, write temp file, atomic rename), which triggers the normal reload. Comments and formatting are not guaranteed to survive an /admin edit.&#10;&#10;Values of the form ${NAME} in any attribute are replaced with environment variable NAME at load time; a missing variable is a validation error.&#10;&#10;Schema (MML v1):&#10;&#60;moxy version=&#34;1&#34;&#62;&#10;  &#60;server host=&#34;127.0.0.1&#34; port=&#34;8080&#34; /&#62;&#10;  &#60;auth issuer=&#34;https://idp.example.com&#34; client-id=&#34;moxy&#34; client-secret=&#34;${MOXY_OIDC_CLIENT_SECRET}&#34; session-ttl=&#34;24h&#34;&#62;&#10;    &#60;admin email=&#34;admin@example.com&#34; /&#62;   (repeatable)&#10;  &#60;/auth&#62;&#10;  &#60;route path=&#34;/openai/*&#34; auth=&#34;api-key&#34; description=&#34;OpenAI models&#34;&#62;   (repeatable)&#10;    ...middleware elements, in execution order...&#10;    &#60;upstream url=&#34;https://api.openai.com/v1&#34; /&#62;   (or &#60;load-balance&#62;)&#10;  &#60;/route&#62;&#10;&#60;/moxy&#62;&#10;&#10;&#60;route&#62; attributes: path (required; literal prefix ending in /* or an exact path), auth = none | api-key | session (default api-key), description (shown on /).&#10;Validation errors: duplicate route path; a path under a reserved prefix (/chat, /admin, /auth, /api, /_app) or equal to /; a route with no &#60;upstream&#62; or &#60;load-balance&#62;; unknown element; unresolved ${NAME}.&#10;Middleware elements are defined on the &#39;Middleware&#39; node.">
+        <bpmn:incoming>Flow_0u8tt3y</bpmn:incoming>
+      </bpmn:task>
+      <bpmn:task id="Activity_0dbscuo" name="model1 url" dai:notes="Example upstream: an AI model endpoint (e.g. an OpenAI-compatible API) declared with &#60;upstream url&#62; in moxy.xml. Upstreams are not fixed in code; any number can be configured.">
+        <bpmn:incoming>Flow_06xjg42</bpmn:incoming>
+      </bpmn:task>
+      <bpmn:task id="Activity_0hb5etj" name="model2 url" dai:notes="Second example upstream, showing that one route can spread traffic across several model endpoints with &#60;load-balance&#62;, and that different routes can point at different models.">
+        <bpmn:incoming>Flow_1ylgszp</bpmn:incoming>
+      </bpmn:task>
+      <bpmn:task id="Activity_1ukdryx" name="developer" dai:type="dai.types.product.persona" dai:stepType="persona" dai:role="Developer" dai:goals="Call models locally: reach every configured model from their own code through one local address, without each application knowing where each model is hosted." dai:behaviours="Uses existing SDKs pointed at a Moxy route, authenticating with a Moxy API key. Browses / to discover routes and uses /chat to try models.">
+        <bpmn:outgoing>Flow_02ybsg7</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="Activity_0m863ow" name="environment&#10;variables" dai:notes="Environment variables read at startup (changes require a restart):&#10;- MOXY_CONFIG: path to moxy.xml. Default ./moxy.xml.&#10;- MOXY_DATA_DIR: directory holding the KV store file. Default ./data (created if missing).&#10;- MOXY_LOG: log level (error | warn | info | debug | trace). Default info.&#10;&#10;Any other variable is only used when moxy.xml references it with ${NAME} (e.g. upstream API keys, the OIDC client secret). Environment variables never override moxy.xml implicitly; secrets must not be written literally into moxy.xml.">
+        <bpmn:incoming>Flow_1fyzgyi</bpmn:incoming>
+      </bpmn:task>
+      <bpmn:task id="Activity_0naucbp" name="Middleware" dai:notes="Per-route middleware, declared as child elements of &#60;route&#62; in moxy.xml.&#10;&#10;Order: request-phase middleware runs in document order; response-phase middleware runs in reverse document order. The first middleware that rejects a request stops the pipeline and the upstream is not called.&#10;&#10;Elements by category:&#10;- headers: &#60;headers&#62; with &#60;set name value&#62;, &#60;add name value&#62; and &#60;remove name&#62; children. Applies to the upstream request; use inside &#60;response&#62; to change response headers.&#10;- request: &#60;request&#62; with &#60;rewrite-path from to&#62;, &#60;max-body-size bytes&#62; (413 if exceeded) and &#60;timeout duration&#62; (default 60s; 504 if exceeded).&#10;- response: &#60;response&#62; with &#60;set&#62;, &#60;add&#62; and &#60;remove&#62; header children, plus &#60;cache ttl&#62; (see &#39;Cache&#39;).&#10;- load balancing: &#60;load-balance strategy=&#34;round-robin | random | failover&#34;&#62; containing two or more &#60;upstream url&#62;. Used in place of a single &#60;upstream&#62;. An upstream that errors or times out is skipped for 30 s.&#10;- ai related: &#60;ai provider=&#34;openai | anthropic | ollama&#34; model=&#34;optional override&#34;&#62;. Parses provider request and response bodies so the model name can be rewritten and token usage counted. Required by &#60;token-budget&#62; and for a route to appear in /chat.&#10;- rate limit: &#60;rate-limit requests=&#34;N&#34; per=&#34;1s | 1m | 1h&#34; key=&#34;api-key | user | ip&#34;&#62;. Counters are kept in memory and reset on restart. Rejection: 429, Retry-After header, error type rate_limited.&#10;- token spend: &#60;token-budget tokens=&#34;N&#34; per=&#34;1h | 1d | 30d&#34; key=&#34;api-key | user&#34;&#62;. Usage is counted from upstream responses and stored in the KV store. A request is rejected once the budget for the current window is used up: 429, Retry-After header, error type token_budget_exceeded.&#10;&#10;Upstream errors: connection failure 502 (error type upstream_unavailable); timeout 504 (upstream_timeout). Upstream HTTP error responses are passed through unchanged.">
+        <bpmn:incoming>Flow_1tvo624</bpmn:incoming>
+        <bpmn:outgoing>Flow_1ylgszp</bpmn:outgoing>
+        <bpmn:outgoing>Flow_06xjg42</bpmn:outgoing>
+        <bpmn:outgoing>Flow_1342qoo</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="Activity_0x5p95d" name="admin" dai:type="dai.types.product.persona" dai:stepType="persona" dai:role="Administrator" dai:goals="Configure models locally: decide which routes exist, which upstreams they use, which middleware applies, and the server&#39;s system settings." dai:behaviours="Signs in through OIDC with an email listed in &#60;auth&#62;&#60;admin&#62;. Uses /admin or edits moxy.xml directly. Issues API keys to developers and agents.">
+        <bpmn:outgoing>Flow_0z4xe6m</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="Activity_1e4qtf3" name="agent" dai:type="dai.types.product.persona" dai:stepType="persona" dai:role="Automated client (AI agent)" dai:goals="Call configured models programmatically through Moxy, within the rate limits and token budgets set for its API key." dai:behaviours="Has no browser and never uses OIDC. Authenticates with a Moxy API key issued by an admin and calls proxy routes and /api/endpoints.">
+        <bpmn:outgoing>Flow_14awy32</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="Activity_00vb7qp" name="Routes" dai:notes="The route table. Each request is matched in this order:&#10;1. Built-in routes, which are reserved: / (exact), /chat and /chat/*, /admin and /admin/*, /auth/*, /api/*, and /_app/* (static UI assets).&#10;2. Proxy routes from moxy.xml, handled by /*. The longest matching path prefix wins; on a tie the route declared first in moxy.xml wins.&#10;3. No match: 404 {&#34;error&#34;: {&#34;type&#34;: &#34;route_not_found&#34;, ...}}.&#10;&#10;Role rules: &#39;user&#39; is anyone signed in through OIDC; &#39;admin&#39; is a user whose email is listed in &#60;auth&#62;&#60;admin email&#62;. Admins can do everything users can.">
+        <bpmn:incoming>Flow_1swv0ri</bpmn:incoming>
+        <bpmn:outgoing>Flow_0uqo3ue</bpmn:outgoing>
+        <bpmn:outgoing>Flow_1c5pdvg</bpmn:outgoing>
+        <bpmn:outgoing>Flow_1isgm00</bpmn:outgoing>
+        <bpmn:outgoing>Flow_0xxjho7</bpmn:outgoing>
+        <bpmn:outgoing>Flow_0w6stqi</bpmn:outgoing>
+        <bpmn:outgoing>Flow_03l40s5</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="Activity_06nppal" name="/admin" dai:type="dai.types.software.api-endpoint" dai:stepType="api-endpoint" dai:notes="Browser admin UI (SvelteKit) for configuring the server. Requires role admin; signed-in non-admins get 403, anonymous callers are redirected to /auth/login?return_to=/admin.&#10;&#10;Functions:&#10;- Edit routes (add, change, delete proxy routes and their upstreams).&#10;- Edit system settings (&#60;server&#62; and &#60;auth&#62;).&#10;- Edit middleware configuration for each route.&#10;- Create, list and revoke API keys.&#10;- Show the active config version and the last reload error, if any.&#10;&#10;Every config change is written back to moxy.xml (see &#39;moxy.xml (config)&#39;); nothing is configured only in the KV store except API keys." dai:method="GET" dai:path="/admin" dai:authType="oauth2" dai:statusCode="200">
+        <bpmn:extensionElements>
+          <dai:fields>
+            <dai:field key="service">serve</dai:field>
+          </dai:fields>
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_1c5pdvg</bpmn:incoming>
+      </bpmn:task>
+      <bpmn:task id="Activity_1xahufv" name="/*" dai:type="dai.types.software.api-endpoint" dai:stepType="api-endpoint" dai:notes="The proxy path. Handles every request that is not a built-in route and matches a &#60;route path&#62; in moxy.xml (see &#39;Routes&#39; for matching).&#10;&#10;Per request:&#10;1. Authenticate according to the route&#39;s auth attribute: none; api-key (Authorization: Bearer &#60;moxy API key&#62;, the default); or session (cookie). Failure gives 401. The caller&#39;s Authorization header and Moxy session cookie are always removed before forwarding; upstream credentials are added by header middleware.&#10;2. Run the route&#39;s middleware (see &#39;Middleware&#39;).&#10;3. Forward to the upstream. The part of the path matched by * is appended to the upstream URL, and the query string is kept (e.g. route /openai/* with upstream https://api.openai.com/v1 maps /openai/chat/completions to https://api.openai.com/v1/chat/completions).&#10;4. Stream the response back through the response phase of the middleware.&#10;All HTTP methods are proxied. Streaming responses (SSE, chunked) are passed through without buffering." dai:path="/*" dai:authType="api-key">
+        <bpmn:extensionElements>
+          <dai:fields>
+            <dai:field key="service">serve</dai:field>
+          </dai:fields>
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_0uqo3ue</bpmn:incoming>
+        <bpmn:outgoing>Flow_1tvo624</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:task id="Activity_1ceywrr" name="/ (anon)" dai:type="dai.types.software.api-endpoint" dai:stepType="api-endpoint" dai:notes="Anonymous HTML page (SvelteKit) that lists the proxy routes in the current moxy.xml: path, description and auth mode. Upstream URLs, headers and credentials are never shown. The same data is available as JSON from GET /api/endpoints." dai:method="GET" dai:path="/" dai:authType="none" dai:statusCode="200">
+        <bpmn:extensionElements>
+          <dai:fields>
+            <dai:field key="service">serve</dai:field>
+          </dai:fields>
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_1isgm00</bpmn:incoming>
+      </bpmn:task>
+      <bpmn:task id="Activity_1kjuls9" name="/chat" dai:type="dai.types.software.api-endpoint" dai:stepType="api-endpoint" dai:notes="Browser chat UI (SvelteKit) for talking to configured models. Requires a signed-in session (role user or admin); without one it redirects (302) to /auth/login?return_to=/chat.&#10;&#10;The model picker lists every proxy route that contains an &#60;ai&#62; middleware element. Messages are sent with POST /api/chat, which runs the request through that route&#39;s full middleware pipeline (so rate limits and token budgets apply to the signed-in user) and streams the reply back using server-sent events. Chat history is held in the browser only; it is not stored on the server." dai:method="GET" dai:path="/chat" dai:authType="oauth2" dai:statusCode="200">
+        <bpmn:extensionElements>
+          <dai:fields>
+            <dai:field key="service">serve</dai:field>
+          </dai:fields>
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_0xxjho7</bpmn:incoming>
+      </bpmn:task>
+      <bpmn:task id="Activity_1j6oxqe" name="any url" dai:notes="Any http(s) URL, not just AI models: Moxy also works as a general-purpose reverse proxy. AI-specific middleware (&#60;ai&#62;, &#60;token-budget&#62;) is simply not configured on such routes.">
+        <bpmn:incoming>Flow_1342qoo</bpmn:incoming>
+      </bpmn:task>
+      <bpmn:task id="Activity_0h0h53q" name="Session" dai:type="dai.types.software.model" dai:stepType="model" dai:notes="Server-side session for a signed-in browser user.&#10;KV key: session#&#60;id&#62;, where id is 32 random bytes, base64url-encoded.&#10;Cookie: moxy_session=&#60;id&#62;; HttpOnly; SameSite=Lax; Path=/; Secure unless the server is bound to 127.0.0.1/localhost.&#10;Lifetime: &#60;auth session-ttl&#62; (default 24h), sliding. Every authenticated request more than 1 h after the last refresh extends expiresAt." dai:modelFormat="plain">
+        <bpmn:extensionElements>
+          <dai:properties>
+            <dai:property name="id" type="str" />
+            <dai:property name="userSub" type="str" />
+            <dai:property name="csrfToken" type="str" />
+            <dai:property name="createdAt" type="datetime" />
+            <dai:property name="expiresAt" type="datetime" />
+          </dai:properties>
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_1icwk2u</bpmn:incoming>
+        <bpmn:dataOutputAssociation id="DataOutputAssociation_0x8hzsn">
+          <bpmn:targetRef>DataStoreReference_0h9ku2u</bpmn:targetRef>
+        </bpmn:dataOutputAssociation>
+      </bpmn:task>
+      <bpmn:task id="Activity_06ixee5" name="Users" dai:type="dai.types.software.model" dai:stepType="model" dai:notes="One record per person who has signed in through OIDC. Created on first login, updated on every login.&#10;KV key: user#&#60;sub&#62;, where sub is the OIDC subject claim.&#10;role is computed at login from &#60;auth&#62;&#60;admin email&#62; and stored; a config change takes effect at the user&#39;s next request (role is re-checked against the current config on each request)." dai:modelFormat="plain">
+        <bpmn:extensionElements>
+          <dai:properties>
+            <dai:property name="sub" type="str" />
+            <dai:property name="email" type="str" />
+            <dai:property name="name" type="str" />
+            <dai:property name="role" type="str" />
+            <dai:property name="createdAt" type="datetime" />
+            <dai:property name="lastLoginAt" type="datetime" />
+          </dai:properties>
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_1sfexq3</bpmn:incoming>
+        <bpmn:dataOutputAssociation id="DataOutputAssociation_0oqokug">
+          <bpmn:targetRef>DataStoreReference_0h9ku2u</bpmn:targetRef>
+        </bpmn:dataOutputAssociation>
+      </bpmn:task>
+      <bpmn:task id="Activity_107p1xs" name="/api" dai:type="dai.types.software.api-endpoint" dai:stepType="api-endpoint" dai:notes="Moxy&#39;s own JSON API, used by the SvelteKit UI and by scripts. It is not the model proxy (model traffic goes through /*).&#10;&#10;Authentication: session cookie (browser) or Authorization: Bearer &#60;moxy API key&#62;. Endpoints:&#10;- GET /api/endpoints: anonymous. Same data as /.&#10;- GET /api/me: user. Current identity and role.&#10;- POST /api/chat: user. Body {&#34;route&#34;: &#34;&#60;route path&#62;&#34;, &#34;messages&#34;: [...]}; streams the reply as server-sent events.&#10;- GET /api/config: admin. Current config as JSON.&#10;- PUT /api/config/routes, PUT /api/config/settings, PUT /api/config/routes/{path}/middleware: admin. Validate, then write moxy.xml. Invalid input gives 422 with the validation errors.&#10;- GET /api/keys, POST /api/keys, DELETE /api/keys/{id}: admin. The plaintext key is returned only once, by POST.&#10;Missing credentials give 401; insufficient role gives 403. State-changing calls made with a session cookie must send the X-CSRF-Token header with the session&#39;s csrf token." dai:path="/api/*" dai:authType="bearer">
+        <bpmn:extensionElements>
+          <dai:fields>
+            <dai:field key="service">serve</dai:field>
+          </dai:fields>
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_0w6stqi</bpmn:incoming>
+      </bpmn:task>
+      <bpmn:task id="Activity_12436hi" name="Auth" dai:notes="OpenID Connect integration plus Moxy API keys. Configured by &#60;auth&#62; in moxy.xml.&#10;Records written to the KV store:&#10;- auth#state#&#60;state&#62;: {nonce, pkceVerifier, returnTo, expiresAt}. Created by /auth/login, deleted on callback, expires after 10 min.&#10;- apikey#&#60;sha256 of key&#62;: {id, name, ownerSub, createdAt, lastUsedAt, revoked}. Keys look like moxy_&#60;32 random base64url chars&#62;; only the hash is stored.&#10;API keys are for programmatic callers (developers&#39; code, AI agents). Each key belongs to the user who created it (an admin), and per-key rate limits and token budgets use it as the key.">
+        <bpmn:incoming>Flow_1gm2pxl</bpmn:incoming>
+        <bpmn:dataOutputAssociation id="DataOutputAssociation_1c50yck">
+          <bpmn:targetRef>DataStoreReference_0h9ku2u</bpmn:targetRef>
+        </bpmn:dataOutputAssociation>
+      </bpmn:task>
+      <bpmn:task id="Activity_19uonmy" name="/auth" dai:type="dai.types.software.api-endpoint" dai:stepType="api-endpoint" dai:notes="OpenID Connect login flow (authorization code flow with PKCE):&#10;- GET /auth/login?return_to=&#60;path&#62;: creates a login-state record and redirects (302) to the OIDC provider.&#10;- GET /auth/callback: validates state and nonce, exchanges the code, creates or updates the user record, creates a session, sets the session cookie, and redirects to return_to (default /). Invalid or expired state gives 400.&#10;- POST /auth/logout: deletes the session, clears the cookie, redirects to /.&#10;Only same-origin relative paths are accepted for return_to." dai:path="/auth/*" dai:authType="none">
+        <bpmn:extensionElements>
+          <dai:fields>
+            <dai:field key="service">serve</dai:field>
+          </dai:fields>
+        </bpmn:extensionElements>
+        <bpmn:incoming>Flow_03l40s5</bpmn:incoming>
+      </bpmn:task>
+      <bpmn:task id="Activity_0z98u12" name="Cache" dai:notes="Optional response cache, enabled per route with &#60;cache ttl=&#34;5m&#34; /&#62; inside &#60;response&#62;. Off by default.&#10;Cached: 200 responses to GET requests, and to POST requests on routes that have &#60;ai&#62;, where the response is not streamed.&#10;Not cached: streamed responses, requests with Cache-Control: no-cache, and responses with Cache-Control: no-store or private.&#10;KV key: cache#&#60;sha256 of route path + method + upstream URL + normalised body + caller key&#62;. The caller (API key or user) is part of the key, so one caller never receives another caller&#39;s cached response.&#10;Entries expire after ttl. All entries for a route are dropped when that route changes in moxy.xml.">
+        <bpmn:incoming>Flow_0hqw7el</bpmn:incoming>
+        <bpmn:dataOutputAssociation id="DataOutputAssociation_099ercj">
+          <bpmn:targetRef>DataStoreReference_0h9ku2u</bpmn:targetRef>
+        </bpmn:dataOutputAssociation>
+      </bpmn:task>
+      <bpmn:dataStoreReference id="DataStoreReference_0h9ku2u" name="KV Store" dai:notes="The single persistent store for all Moxy state. An embedded key-value store (redb) in one file, $MOXY_DATA_DIR/moxy.redb, accessed through a KvStore trait so the engine can be replaced.&#10;Single Table Design: one table; entity type is the key prefix:&#10;- user#&#60;sub&#62;&#10;- session#&#60;id&#62;&#10;- auth#state#&#60;state&#62;&#10;- apikey#&#60;sha256&#62;&#10;- cache#&#60;sha256&#62;&#10;- usage#&#60;api-key id | user sub&#62;#&#60;route path&#62;#&#60;window start&#62; (token-budget counters)&#10;Every value is JSON and carries an optional expiresAt. Expired entries are ignored on read and deleted by a sweep every 10 min.&#10;Rate-limit counters are in memory and are not stored here." />
+      <bpmn:sequenceFlow id="Flow_02ybsg7" sourceRef="Activity_1ukdryx" targetRef="Activity_0k3fev3" />
+      <bpmn:sequenceFlow id="Flow_0z4xe6m" sourceRef="Activity_0x5p95d" targetRef="Activity_0k3fev3" />
+      <bpmn:sequenceFlow id="Flow_14awy32" sourceRef="Activity_1e4qtf3" targetRef="Activity_0k3fev3" />
+      <bpmn:sequenceFlow id="Flow_0u8tt3y" name="load on start&#10;reload on change" sourceRef="Activity_0k3fev3" targetRef="Activity_0q42btx" />
+      <bpmn:sequenceFlow id="Flow_1fyzgyi" name="read on start" sourceRef="Activity_0k3fev3" targetRef="Activity_0m863ow" />
+      <bpmn:sequenceFlow id="Flow_1swv0ri" sourceRef="Activity_0k3fev3" targetRef="Activity_00vb7qp" />
+      <bpmn:sequenceFlow id="Flow_1icwk2u" sourceRef="Activity_0k3fev3" targetRef="Activity_0h0h53q" />
+      <bpmn:sequenceFlow id="Flow_1sfexq3" sourceRef="Activity_0k3fev3" targetRef="Activity_06ixee5" />
+      <bpmn:sequenceFlow id="Flow_1gm2pxl" sourceRef="Activity_0k3fev3" targetRef="Activity_12436hi" />
+      <bpmn:sequenceFlow id="Flow_0hqw7el" sourceRef="Activity_0k3fev3" targetRef="Activity_0z98u12" />
+      <bpmn:sequenceFlow id="Flow_06xjg42" sourceRef="Activity_0naucbp" targetRef="Activity_0dbscuo" />
+      <bpmn:sequenceFlow id="Flow_1ylgszp" sourceRef="Activity_0naucbp" targetRef="Activity_0hb5etj" />
+      <bpmn:sequenceFlow id="Flow_1tvo624" sourceRef="Activity_1xahufv" targetRef="Activity_0naucbp" />
+      <bpmn:sequenceFlow id="Flow_1342qoo" sourceRef="Activity_0naucbp" targetRef="Activity_1j6oxqe" />
+      <bpmn:sequenceFlow id="Flow_0uqo3ue" sourceRef="Activity_00vb7qp" targetRef="Activity_1xahufv" />
+      <bpmn:sequenceFlow id="Flow_1c5pdvg" sourceRef="Activity_00vb7qp" targetRef="Activity_06nppal" />
+      <bpmn:sequenceFlow id="Flow_1isgm00" sourceRef="Activity_00vb7qp" targetRef="Activity_1ceywrr" />
+      <bpmn:sequenceFlow id="Flow_0xxjho7" sourceRef="Activity_00vb7qp" targetRef="Activity_1kjuls9" />
+      <bpmn:sequenceFlow id="Flow_0w6stqi" sourceRef="Activity_00vb7qp" targetRef="Activity_107p1xs" />
+      <bpmn:sequenceFlow id="Flow_03l40s5" sourceRef="Activity_00vb7qp" targetRef="Activity_19uonmy" />
+      <bpmn:textAnnotation id="TextAnnotation_0ahmac8">
+        <bpmn:text>Categories of middleware to manipulate requests and responses
+- headers
+- request
+- response (incl. cache)
+- load balancing
+- ai related
+- rate limit
+- token spend
+(Elements and behaviour: see the Middleware node's notes.)</bpmn:text>
+      </bpmn:textAnnotation>
+      <bpmn:association id="Association_0ptj8ma" associationDirection="None" sourceRef="Activity_0naucbp" targetRef="TextAnnotation_0ahmac8" />
+    </bpmn:subProcess>
+    <bpmn:subProcess id="Group_decisions" name="decisions" dai:notes="Architecture decisions that resolve ambiguities found in v0.1.0 of this spec. Status proposed = taken while clarifying the spec and awaiting the owner&#39;s confirmation.">
+      <bpmn:task id="Decision_std" name="Single Table Design" dai:type="dai.types.software.decision" dai:status="accepted" dai:context="v0.1.0 listed Single Table Design as a dependency, but it is a data-modelling pattern, not a package." dai:decision="All entities share one KV table and are distinguished by typed key prefixes (user#, session#, auth#, apikey#, cache#, usage#)." dai:consequences="One storage abstraction and one file to back up. Key formats are part of the contract and need migration if changed." />
+      <bpmn:task id="Decision_cfgfile" name="Config file is moxy.xml" dai:type="dai.types.software.decision" dai:status="proposed" dai:context="v0.1.0 referred to the config as moxy.xml, config.yaml and config.yml in different places." dai:decision="There is exactly one config file, moxy.xml, in Moxy Markup Language. The port, routes, middleware, auth and system settings all live there." dai:consequences="No YAML support. Every reference to config.yaml or config.yml means moxy.xml." />
+      <bpmn:task id="Decision_kv" name="Embedded KV engine" dai:type="dai.types.software.decision" dai:status="proposed" dai:context="v0.1.0 named a &#39;KV Store&#39; but no product. Moxy runs locally as a single process." dai:decision="Use redb, an embedded Rust KV store, in one file under $MOXY_DATA_DIR, behind a KvStore trait." dai:consequences="No external database to run. Single-node only; running several Moxy instances against the same store is not supported." />
+      <bpmn:task id="Decision_adminwrite" name="/admin persists to moxy.xml" dai:type="dai.types.software.decision" dai:status="proposed" dai:context="v0.1.0 did not say whether /admin changes are written back to moxy.xml or stored elsewhere." dai:decision="/admin and /api write moxy.xml atomically; the file watcher then reloads it. moxy.xml stays the single source of truth. API keys are the only admin-managed data kept in the KV store." dai:consequences="Hand edits and UI edits never diverge. Comments and formatting in moxy.xml may be lost after a UI edit." />
+      <bpmn:task id="Decision_routing" name="Route matching" dai:type="dai.types.software.decision" dai:status="proposed" dai:context="v0.1.0 did not say how a catch-all request is mapped to an upstream, or how built-in and proxy routes interact." dai:decision="Built-in prefixes are reserved and checked first. Proxy routes match by longest prefix, then by declaration order. The suffix matched by * is appended to the upstream URL." dai:consequences="Proxy routes cannot use /, /chat, /admin, /auth, /api or /_app. This is enforced at config validation." />
+      <bpmn:task id="Decision_mw" name="Middleware order and rejection" dai:type="dai.types.software.decision" dai:status="proposed" dai:context="v0.1.0 named seven middleware categories but not the elements, their order, or how rejections look." dai:decision="Request phase runs in document order and response phase in reverse. Rejections use fixed status codes (401, 413, 429 + Retry-After, 502, 504) and a JSON error body." dai:consequences="Callers can handle Moxy errors programmatically. The element set is v1 and can be extended." />
+      <bpmn:task id="Decision_authz" name="Roles and API keys" dai:type="dai.types.software.decision" dai:status="proposed" dai:context="v0.1.0 did not say which routes require auth, what roles exist, how someone becomes admin, or how non-browser callers authenticate." dai:decision="Two roles: user (any OIDC sign-in) and admin (email listed in &#60;auth&#62;&#60;admin&#62;). / is anonymous, /chat needs user, /admin needs admin, /api is per endpoint, and proxy routes are per-route (default api-key). Programmatic callers use admin-issued API keys sent as Bearer tokens." dai:consequences="Admin rights are controlled in config, not in the UI. Existing OpenAI-style SDKs work unchanged by setting their API key to a Moxy key." />
+      <bpmn:task id="Decision_ui" name="SvelteKit served by Moxy" dai:type="dai.types.software.decision" dai:status="proposed" dai:context="v0.1.0 listed SvelteKit without saying which pages it renders or how it runs next to a Rust server." dai:decision="SvelteKit (adapter-static) builds /, /chat and /admin as a single-page app. The assets are embedded in the binary and served under /_app/*. Data comes from /api." dai:consequences="One binary, no Node.js at runtime. No server-side rendering." />
+      <bpmn:task id="Decision_env" name="Env vars vs config" dai:type="dai.types.software.decision" dai:status="proposed" dai:context="v0.1.0 did not list environment variables or say how they relate to moxy.xml." dai:decision="Only MOXY_CONFIG, MOXY_DATA_DIR and MOXY_LOG are read directly. Everything else comes from explicit ${NAME} references in moxy.xml." dai:consequences="Secrets stay out of the config file and there are no hidden overrides." />
+      <bpmn:task id="Decision_cache" name="Cache policy" dai:type="dai.types.software.decision" dai:status="proposed" dai:context="v0.1.0 had a cache with no stated contents, keys or expiry." dai:decision="Opt-in per-route response cache (&#60;cache ttl&#62;), keyed by request and caller, for non-streamed 200 responses only." dai:consequences="No surprise caching of model output. Cache entries are never shared between callers." />
+    </bpmn:subProcess>
+    <bpmn:subProcess id="Group_assumptions" name="assumptions" dai:notes="Readings of the original author&#39;s intent that this spec depends on. Each is unvalidated until the owner confirms it.">
+      <bpmn:task id="Assumption_agent" name="Agent persona is an automated client" dai:type="dai.types.business.assumption" dai:stepType="assumption" dai:status="unvalidated" dai:basis="v0.1.0 names the persona and connects it to serve, but gives it no role or goals." dai:ifWrong="If agents are meant to be AI agents hosted inside Moxy, an agent runtime would need to be specified." />
+      <bpmn:task id="Assumption_authnotes" name="/auth notes were a copy error" dai:type="dai.types.business.assumption" dai:stepType="assumption" dai:status="unvalidated" dai:basis="In v0.1.0 the /auth notes were identical to the /admin notes, and Auth uses OpenID Connect." dai:ifWrong="If /auth was meant to configure auth providers, that function belongs in /admin settings." />
+      <bpmn:task id="Assumption_models" name="model1/model2 are examples" dai:type="dai.types.business.assumption" dai:stepType="assumption" dai:status="unvalidated" dai:basis="v0.1.0 shows two hard-coded model URL nodes, and &#39;any url&#39; is also forwarded." dai:ifWrong="If exactly two fixed model upstreams were intended, the config schema could be simpler." />
+      <bpmn:task id="Assumption_api" name="/api is Moxy&#39;s management API" dai:type="dai.types.business.assumption" dai:stepType="assumption" dai:status="unvalidated" dai:basis="v0.1.0 defines /api with no description. Model traffic already has the /* proxy path, and the SvelteKit UI needs a data API." dai:ifWrong="If /api was meant to be a unified model API (e.g. OpenAI-compatible), it would overlap with proxy routes and needs a separate design." />
+    </bpmn:subProcess>
+    <bpmn:textAnnotation id="TextAnnotation_1kknaxa">
+      <bpmn:text>Moxy Markup Language (XML)
+Compose a server configuration using XML elements.
+(Schema: see the moxy.xml node's notes.)</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_1m5q5fc" associationDirection="None" sourceRef="Activity_0q42btx" targetRef="TextAnnotation_1kknaxa" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+      <bpmndi:BPMNShape id="Activity_0wz4xd1_di" bpmnElement="Activity_0wz4xd1" isExpanded="true">
+        <dc:Bounds x="-250" y="-474" width="1440" height="184" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0n9lc1t_di" bpmnElement="Activity_0n9lc1t">
+        <dc:Bounds x="-210" y="-410" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_1lysrcp" bpmnElement="Activity_1nafjvj">
+        <dc:Bounds x="-70" y="-410" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_02rcsft" bpmnElement="Activity_09jmudl">
+        <dc:Bounds x="70" y="-410" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_redb001_di" bpmnElement="Activity_redb001">
+        <dc:Bounds x="210" y="-410" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1mpy4pg_di" bpmnElement="Activity_1mpy4pg" isExpanded="true">
+        <dc:Bounds x="-250" y="-260" width="1440" height="640" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0k3fev3_di" bpmnElement="Activity_0k3fev3">
+        <dc:Bounds x="20" y="-10" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0q42btx_di" bpmnElement="Activity_0q42btx">
+        <dc:Bounds x="20" y="120" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0dbscuo_di" bpmnElement="Activity_0dbscuo">
+        <dc:Bounds x="960" y="-200" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0hb5etj_di" bpmnElement="Activity_0hb5etj">
+        <dc:Bounds x="960" y="-100" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1ukdryx_di" bpmnElement="Activity_1ukdryx">
+        <dc:Bounds x="-200" y="-110" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0m863ow_di" bpmnElement="Activity_0m863ow">
+        <dc:Bounds x="20" y="-140" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0naucbp_di" bpmnElement="Activity_0naucbp">
+        <dc:Bounds x="760" y="-100" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0x5p95d_di" bpmnElement="Activity_0x5p95d">
+        <dc:Bounds x="-200" y="-10" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1e4qtf3_di" bpmnElement="Activity_1e4qtf3">
+        <dc:Bounds x="-200" y="90" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_00vb7qp_di" bpmnElement="Activity_00vb7qp">
+        <dc:Bounds x="230" y="-190" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_06nppal_di" bpmnElement="Activity_06nppal">
+        <dc:Bounds x="580" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1xahufv_di" bpmnElement="Activity_1xahufv">
+        <dc:Bounds x="580" y="-100" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1ceywrr_di" bpmnElement="Activity_1ceywrr">
+        <dc:Bounds x="580" y="-190" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1kjuls9_di" bpmnElement="Activity_1kjuls9">
+        <dc:Bounds x="580" y="-10" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1j6oxqe_di" bpmnElement="Activity_1j6oxqe">
+        <dc:Bounds x="960" y="0" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0h0h53q_di" bpmnElement="Activity_0h0h53q">
+        <dc:Bounds x="230" y="-10" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_06ixee5_di" bpmnElement="Activity_06ixee5">
+        <dc:Bounds x="230" y="80" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_107p1xs_di" bpmnElement="Activity_107p1xs">
+        <dc:Bounds x="580" y="170" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_12436hi_di" bpmnElement="Activity_12436hi">
+        <dc:Bounds x="230" y="-100" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_19uonmy_di" bpmnElement="Activity_19uonmy">
+        <dc:Bounds x="580" y="260" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0z98u12_di" bpmnElement="Activity_0z98u12">
+        <dc:Bounds x="230" y="170" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DataStoreReference_0h9ku2u_di" bpmnElement="DataStoreReference_0h9ku2u">
+        <dc:Bounds x="405" y="45" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="467" y="63" width="45" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_02ybsg7_di" bpmnElement="Flow_02ybsg7">
+        <di:waypoint x="-100" y="-70" />
+        <di:waypoint x="-70" y="-70" />
+        <di:waypoint x="-70" y="30" />
+        <di:waypoint x="20" y="30" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0z4xe6m_di" bpmnElement="Flow_0z4xe6m">
+        <di:waypoint x="-100" y="30" />
+        <di:waypoint x="20" y="30" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_14awy32_di" bpmnElement="Flow_14awy32">
+        <di:waypoint x="-100" y="130" />
+        <di:waypoint x="-70" y="130" />
+        <di:waypoint x="-70" y="30" />
+        <di:waypoint x="20" y="30" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0u8tt3y_di" bpmnElement="Flow_0u8tt3y">
+        <di:waypoint x="70" y="70" />
+        <di:waypoint x="70" y="120" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="-33" y="85" width="86" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1fyzgyi_di" bpmnElement="Flow_1fyzgyi">
+        <di:waypoint x="70" y="-10" />
+        <di:waypoint x="70" y="-60" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="78" y="-42" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1swv0ri_di" bpmnElement="Flow_1swv0ri">
+        <di:waypoint x="120" y="30" />
+        <di:waypoint x="170" y="30" />
+        <di:waypoint x="170" y="-150" />
+        <di:waypoint x="230" y="-150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1icwk2u_di" bpmnElement="Flow_1icwk2u">
+        <di:waypoint x="120" y="30" />
+        <di:waypoint x="230" y="30" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1sfexq3_di" bpmnElement="Flow_1sfexq3">
+        <di:waypoint x="120" y="30" />
+        <di:waypoint x="170" y="30" />
+        <di:waypoint x="170" y="120" />
+        <di:waypoint x="230" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1gm2pxl_di" bpmnElement="Flow_1gm2pxl">
+        <di:waypoint x="120" y="30" />
+        <di:waypoint x="170" y="30" />
+        <di:waypoint x="170" y="-60" />
+        <di:waypoint x="230" y="-60" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0hqw7el_di" bpmnElement="Flow_0hqw7el">
+        <di:waypoint x="120" y="30" />
+        <di:waypoint x="170" y="30" />
+        <di:waypoint x="170" y="210" />
+        <di:waypoint x="230" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_06xjg42_di" bpmnElement="Flow_06xjg42">
+        <di:waypoint x="860" y="-60" />
+        <di:waypoint x="913" y="-60" />
+        <di:waypoint x="913" y="-160" />
+        <di:waypoint x="960" y="-160" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1ylgszp_di" bpmnElement="Flow_1ylgszp">
+        <di:waypoint x="860" y="-60" />
+        <di:waypoint x="960" y="-60" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1tvo624_di" bpmnElement="Flow_1tvo624">
+        <di:waypoint x="680" y="-60" />
+        <di:waypoint x="760" y="-60" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1342qoo_di" bpmnElement="Flow_1342qoo">
+        <di:waypoint x="860" y="-60" />
+        <di:waypoint x="913" y="-60" />
+        <di:waypoint x="913" y="40" />
+        <di:waypoint x="960" y="40" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0uqo3ue_di" bpmnElement="Flow_0uqo3ue">
+        <di:waypoint x="330" y="-150" />
+        <di:waypoint x="550" y="-150" />
+        <di:waypoint x="550" y="-60" />
+        <di:waypoint x="580" y="-60" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1c5pdvg_di" bpmnElement="Flow_1c5pdvg">
+        <di:waypoint x="330" y="-150" />
+        <di:waypoint x="550" y="-150" />
+        <di:waypoint x="550" y="120" />
+        <di:waypoint x="580" y="120" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1isgm00_di" bpmnElement="Flow_1isgm00">
+        <di:waypoint x="330" y="-150" />
+        <di:waypoint x="580" y="-150" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0xxjho7_di" bpmnElement="Flow_0xxjho7">
+        <di:waypoint x="330" y="-150" />
+        <di:waypoint x="550" y="-150" />
+        <di:waypoint x="550" y="30" />
+        <di:waypoint x="580" y="30" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0w6stqi_di" bpmnElement="Flow_0w6stqi">
+        <di:waypoint x="330" y="-150" />
+        <di:waypoint x="550" y="-150" />
+        <di:waypoint x="550" y="210" />
+        <di:waypoint x="580" y="210" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_03l40s5_di" bpmnElement="Flow_03l40s5">
+        <di:waypoint x="330" y="-150" />
+        <di:waypoint x="550" y="-150" />
+        <di:waypoint x="550" y="300" />
+        <di:waypoint x="580" y="300" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="TextAnnotation_0ahmac8_di" bpmnElement="TextAnnotation_0ahmac8">
+        <dc:Bounds x="730" y="142" width="220" height="214" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_1kknaxa_di" bpmnElement="TextAnnotation_1kknaxa">
+        <dc:Bounds x="40" y="270" width="214" height="86" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_0x8hzsn_di" bpmnElement="DataOutputAssociation_0x8hzsn">
+        <di:waypoint x="330" y="30" />
+        <di:waypoint x="380" y="30" />
+        <di:waypoint x="405" y="52" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_0oqokug_di" bpmnElement="DataOutputAssociation_0oqokug">
+        <di:waypoint x="330" y="120" />
+        <di:waypoint x="370" y="120" />
+        <di:waypoint x="405" y="88" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_1c50yck_di" bpmnElement="DataOutputAssociation_1c50yck">
+        <di:waypoint x="330" y="-60" />
+        <di:waypoint x="380" y="-60" />
+        <di:waypoint x="416" y="45" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataOutputAssociation_099ercj_di" bpmnElement="DataOutputAssociation_099ercj">
+        <di:waypoint x="330" y="210" />
+        <di:waypoint x="370" y="210" />
+        <di:waypoint x="414" y="95" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_0ptj8ma_di" bpmnElement="Association_0ptj8ma">
+        <di:waypoint x="814" y="-20" />
+        <di:waypoint x="830" y="142" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_1m5q5fc_di" bpmnElement="Association_1m5q5fc">
+        <di:waypoint x="90" y="200" />
+        <di:waypoint x="125" y="270" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Group_decisions_di" bpmnElement="Group_decisions" isExpanded="true">
+        <dc:Bounds x="-250" y="420" width="1440" height="184" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Decision_std_di" bpmnElement="Decision_std">
+        <dc:Bounds x="-210" y="484" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Decision_cfgfile_di" bpmnElement="Decision_cfgfile">
+        <dc:Bounds x="-70" y="484" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Decision_kv_di" bpmnElement="Decision_kv">
+        <dc:Bounds x="70" y="484" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Decision_adminwrite_di" bpmnElement="Decision_adminwrite">
+        <dc:Bounds x="210" y="484" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Decision_routing_di" bpmnElement="Decision_routing">
+        <dc:Bounds x="350" y="484" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Decision_mw_di" bpmnElement="Decision_mw">
+        <dc:Bounds x="490" y="484" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Decision_authz_di" bpmnElement="Decision_authz">
+        <dc:Bounds x="630" y="484" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Decision_ui_di" bpmnElement="Decision_ui">
+        <dc:Bounds x="770" y="484" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Decision_env_di" bpmnElement="Decision_env">
+        <dc:Bounds x="910" y="484" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Decision_cache_di" bpmnElement="Decision_cache">
+        <dc:Bounds x="1050" y="484" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Group_assumptions_di" bpmnElement="Group_assumptions" isExpanded="true">
+        <dc:Bounds x="-250" y="632" width="600" height="218" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Assumption_agent_di" bpmnElement="Assumption_agent">
+        <dc:Bounds x="-210" y="696" width="100" height="114" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Assumption_authnotes_di" bpmnElement="Assumption_authnotes">
+        <dc:Bounds x="-70" y="696" width="100" height="114" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Assumption_models_di" bpmnElement="Assumption_models">
+        <dc:Bounds x="70" y="696" width="100" height="114" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Assumption_api_di" bpmnElement="Assumption_api">
+        <dc:Bounds x="210" y="696" width="100" height="114" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

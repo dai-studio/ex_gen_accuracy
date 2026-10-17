@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chat · {{title}}</title>
+  <style nonce="{{nonce}}">{{{styles}}}</style>
+</head>
+<body data-user="{{user}}" data-can-logout="{{canLogout}}" data-api="{{apiEnabled}}" data-admin="{{adminLink}}">
+  <div class="chat">
+    <header class="bar">
+      <span class="brand">{{title}}</span>
+      <span class="spacer"></span>
+      <a id="admin-link" class="hidden" href="/admin">Admin</a>
+      <span class="who" id="who"></span>
+      <button id="logout" class="hidden" type="button">Sign out</button>
+    </header>
+    <div class="controls">
+      <label>Model <select id="model"></select></label>
+      <label><input id="stream" type="checkbox" checked> Stream</label>
+      <label>Temperature <input id="temperature" type="number" min="0" max="2" step="0.1" placeholder="default"></label>
+      <span class="spacer"></span>
+      <button id="clear" type="button">New chat</button>
+    </div>
+    <details>
+      <summary class="muted">System prompt</summary>
+      <textarea id="system" placeholder="Optional instructions sent as the first system message"></textarea>
+    </details>
+    <div class="messages" id="messages">
+      <div class="empty" id="empty">Pick a model and say hello.</div>
+    </div>
+    <form class="composer" id="composer">
+      <textarea id="input" placeholder="Message (Enter to send, Shift+Enter for a new line)" rows="2"></textarea>
+      <button class="primary" id="send" type="submit">Send</button>
+      <button id="stop" class="hidden" type="button">Stop</button>
+    </form>
+  </div>
+  <script nonce="{{nonce}}">
+    const $ = (id) => document.getElementById(id);
+    const els = {
+      model: $('model'), stream: $('stream'), temperature: $('temperature'), system: $('system'),
+      messages: $('messages'), empty: $('empty'), input: $('input'), send: $('send'), stop: $('stop'),
+      composer: $('composer'), clear: $('clear'), who: $('who'), logout: $('logout'),
+    };
+    const data = document.body.dataset;
+    let history = [];
+    let controller = null;
+
+    if (data.user) els.who.textContent = 'Signed in as ' + data.user;
+    if (data.canLogout === 'true') els.logout.classList.remove('hidden');
+    if (data.admin === 'true') $('admin-link').classList.remove('hidden');
+
+    function addMessage(role, text) {
+      els.empty.classList.add('hidden');
+      const div = document.createElement('div');
+      div.className = 'msg ' + role;
+      div.textContent = text;
+      els.messages.appendChild(div);
+      els.messages.scrollTop = els.messages.scrollHeight;
+      return div;
+    }
+
+    function addMeta(div, text) {
+      const meta = document.createElement('span');
+      meta.className = 'meta';
+      meta.textContent = text;
+      div.appendChild(meta);
+    }
+
+    async function errorText(res) {
+      try {
+        const body = await res.json();
+        return (body.error && body.error.message) || JSON.stringify(body);
+      } catch {
+        return res.status + ' ' + res.statusText;
+      }
+    }
+
+    async function loadModels() {
+      if (data.api !== 'true') {
+        addMessage('error', 'The API built-in is disabled, so the chat UI cannot reach any model.');
+        return;
+      }
+      const res = await fetch('/api/v1/models', { credentials: 'same-origin' });
+      if (!res.ok) {
+        addMessage('error', 'Could not load models: ' + (await errorText(res)));
+        return;
+      }
+      const body = await res.json();
+      els.model.replaceChildren();
+      for (const m of body.data) {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = m.id + (m.description ? ' — ' + m.description : '');
+        els.model.appendChild(opt);
+      }
+      if (!body.data.length) addMessage('system', 'No models are available to you. Declare <models> on a route in the gateway config.');
+      const saved = localStorage.getItem('moxy.model');
+      if (saved && body.data.some((m) => m.id === saved)) els.model.value = saved;
+    }
+
+    function setBusy(busy) {
+      els.send.disabled = busy;
+      els.stop.classList.toggle('hidden', !busy);
+    }
+
+    function usageText(usage, started) {
+      const parts = [((Date.now() - started) / 1000).toFixed(1) + 's'];
+      if (usage) parts.push((usage.prompt_tokens ?? usage.input_tokens ?? 0) + ' in / ' + (usage.completion_tokens ?? usage.output_tokens ?? 0) + ' out tokens');
+      return parts.join(' · ');
+    }
+
+    async function send(text) {
+      const model = els.model.value;
+      if (!model) return;
+      localStorage.setItem('moxy.model', model);
+      history.push({ role: 'user', content: text });
+      addMessage('user', text);
+      const messages = els.system.value.trim() ? [{ role: 'system', content: els.system.value.trim() }, ...history] : history.slice();
+      const request = { model, messages, stream: els.stream.checked };
+      if (els.temperature.value !== '') request.temperature = Number(els.temperature.value);
+      if (request.stream) request.stream_options = { include_usage: true };
+
+      const out = addMessage('assistant', '');
+      const started = Date.now();
+      controller = new AbortController();
+      setBusy(true);
+      let reply = '';
+      let usage = null;
+      try {
+        const res = await fetch('/api/v1/chat/completions', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(request),
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(await errorText(res));
+        const type = res.headers.get('content-type') || '';
+        if (type.includes('text/event-stream')) {
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          for (;;) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            let nl;
+            while ((nl = buffer.indexOf('\n')) >= 0) {
+              const line = buffer.slice(0, nl).trim();
+              buffer = buffer.slice(nl + 1);
+              if (!line.startsWith('data:')) continue;
+              const payload = line.slice(5).trim();
+              if (!payload || payload === '[DONE]') continue;
+              try {
+                const chunk = JSON.parse(payload);
+                const delta = chunk.choices && chunk.choices[0] && chunk.choices[0].delta;
+                if (delta && typeof delta.content === 'string') {
+                  reply += delta.content;
+                  out.textContent = reply;
+                  els.messages.scrollTop = els.messages.scrollHeight;
+                }
+                if (chunk.usage) usage = chunk.usage;
+              } catch { /* ignore keep-alives and partial lines */ }
+            }
+          }
+        } else {
+          const body = await res.json();
+          const choice = body.choices && body.choices[0];
+          reply = (choice && choice.message && choice.message.content) || '';
+          usage = body.usage || null;
+          out.textContent = reply;
+        }
+        if (res.headers.get('x-moxy-cache') === 'HIT') usage = null;
+        history.push({ role: 'assistant', content: reply });
+        addMeta(out, usageText(usage, started) + (res.headers.get('x-moxy-cache') === 'HIT' ? ' · cached' : ''));
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          if (reply) history.push({ role: 'assistant', content: reply });
+          addMeta(out, 'stopped');
+        } else {
+          out.remove();
+          history.pop();
+          addMessage('error', err.message);
+        }
+      } finally {
+        controller = null;
+        setBusy(false);
+        els.input.focus();
+      }
+    }
+
+    els.composer.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = els.input.value.trim();
+      if (!text || controller) return;
+      els.input.value = '';
+      send(text);
+    });
+    els.input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+        e.preventDefault();
+        els.composer.requestSubmit();
+      }
+    });
+    els.stop.addEventListener('click', () => controller && controller.abort());
+    els.clear.addEventListener('click', () => {
+      if (controller) controller.abort();
+      history = [];
+      els.messages.replaceChildren(els.empty);
+      els.empty.classList.remove('hidden');
+    });
+    els.logout.addEventListener('click', async () => {
+      await fetch('/auth/logout', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: '{}' });
+      location.href = '/auth/login?next=/chat';
+    });
+
+    loadModels().catch((err) => addMessage('error', err.message));
+  </script>
+</body>
+</html>

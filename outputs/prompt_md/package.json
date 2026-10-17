@@ -1,0 +1,30 @@
+{
+  "name": "moxy",
+  "version": "0.1.0",
+  "description": "Moxy: an XML-configured gateway between callers (developers, admins, AI agents) and AI model endpoints",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "moxy": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "ui",
+    "examples"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "test": "node --test --test-reporter=spec \"test/**/*.test.ts\"",
+    "check": "npm run typecheck && npm run build && npm test",
+    "start": "node dist/cli.js serve",
+    "dev": "node src/cli.ts serve"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "^5.9.3"
+  }
+}

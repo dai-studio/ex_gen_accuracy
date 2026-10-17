@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Example Moxy configuration.
+
+  Try it locally without any API keys:
+    node examples/mock-llm.ts 9001 &
+    node src/cli.ts serve -c examples/moxy.xml
+  then open http://127.0.0.1:8080/chat and sign in as admin / admin
+  (override with MOXY_ADMIN_PASSWORD).
+
+  ${NAME} reads an environment variable (startup fails if unset);
+  ${NAME:-default} supplies a fallback. Durations: 500ms, 30s, 5m, 1h, 1d.
+-->
+<moxy>
+  <server host="127.0.0.1" port="${MOXY_PORT:-8080}" max-body="10mb"/>
+
+  <logging level="info" access="true" format="text"/>
+
+  <auth secret="${MOXY_SECRET:-dev-only-secret-change-me-please}" token-ttl="12h">
+    <!-- Prefer password-hash in production: `moxy hash-password` prints one. -->
+    <user name="admin" password="${MOXY_ADMIN_PASSWORD:-admin}" roles="admin"/>
+    <user name="dev" password="${MOXY_DEV_PASSWORD:-developer}" roles="developer"/>
+    <!-- Agents authenticate with an API key (Authorization: Bearer ... or X-API-Key). -->
+    <api-key name="agent" key="${MOXY_AGENT_KEY:-moxy_agent_dev_key_change_me}" roles="agent"/>
+  </auth>
+
+  <builtins admin="true" auth="true" chat="true" api="true" discovery="true" chat-auth="true" title="Moxy"/>
+
+  <upstreams>
+    <upstream name="mock" url="http://127.0.0.1:9001/v1" timeout="30s"/>
+    <upstream name="openai" url="https://api.openai.com/v1" timeout="120s">
+      <header name="Authorization" value="Bearer ${OPENAI_API_KEY:-}"/>
+    </upstream>
+    <upstream name="anthropic" url="https://api.anthropic.com/v1" timeout="120s">
+      <header name="x-api-key" value="${ANTHROPIC_API_KEY:-}"/>
+      <header name="anthropic-version" value="2023-06-01"/>
+    </upstream>
+  </upstreams>
+
+  <!-- Reusable middleware chains, included with <use chain="..."/>. -->
+  <chains>
+    <chain name="members">
+      <auth roles="developer,agent"/>
+      <rate-limit requests="120" window="1m" key="principal"/>
+      <quota tokens="500000" window="1d" key="principal"/>
+    </chain>
+  </chains>
+
+  <!-- Global middleware runs first on every configured route. -->
+  <middleware>
+    <set-header name="X-Moxy-Route" value="{route.id}" phase="response"/>
+  </middleware>
+
+  <routes>
+    <!-- Local mock model, handy for demos and tests. -->
+    <route id="mock" path="/mock/*">
+      <description>Local OpenAI-compatible mock model (examples/mock-llm.ts)</description>
+      <upstream ref="mock"/>
+      <models>
+        <model id="mock-small" description="Echoes your message"/>
+        <model id="mock-fast" upstream-model="mock-small" description="Alias of mock-small"/>
+      </models>
+      <middleware>
+        <use chain="members"/>
+        <system-prompt mode="prepend">You are a helpful assistant behind the Moxy gateway.</system-prompt>
+        <max-tokens limit="1024"/>
+        <cache ttl="2m"/>
+      </middleware>
+    </route>
+
+    <!-- OpenAI pass-through: /openai/chat/completions -> https://api.openai.com/v1/chat/completions -->
+    <route id="openai" path="/openai/*" methods="GET,POST">
+      <description>OpenAI API (chat, embeddings, models)</description>
+      <upstream ref="openai"/>
+      <models>
+        <model id="gpt-4o-mini"/>
+        <model id="text-embedding-3-small"/>
+      </models>
+      <middleware>
+        <use chain="members"/>
+        <model-filter allow="gpt-4o*, text-embedding-3-*"/>
+        <redact patterns="email,credit-card,api-key"/>
+        <max-tokens limit="4096"/>
+      </middleware>
+    </route>
+
+    <!-- Anthropic Messages API pass-through for developers only. -->
+    <route id="anthropic" path="/anthropic/*" methods="POST">
+      <description>Anthropic Messages API</description>
+      <upstream ref="anthropic"/>
+      <middleware>
+        <auth roles="developer"/>
+        <rate-limit requests="30" window="1m"/>
+        <model-filter allow="claude-*"/>
+      </middleware>
+    </route>
+
+    <!-- Browser apps on another origin can call the OpenAI route through CORS. -->
+    <route id="openai-browser" path="/browser/openai/*" methods="POST" hidden="true">
+      <upstream ref="openai"/>
+      <middleware>
+        <cors origins="http://localhost:*" credentials="false"/>
+        <auth roles="developer"/>
+        <timeout value="60s"/>
+      </middleware>
+    </route>
+  </routes>
+</moxy>

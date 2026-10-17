@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Example Moxy config. Copy to moxy.xml (or point MOXY_CONFIG at it). -->
+<moxy version="1">
+  <server host="127.0.0.1" port="8080" />
+
+  <auth issuer="https://idp.example.com" client-id="moxy" client-secret="${MOXY_OIDC_CLIENT_SECRET}" session-ttl="24h">
+    <admin email="admin@example.com" />
+  </auth>
+
+  <route path="/openai/*" auth="api-key" description="OpenAI models">
+    <headers>
+      <set name="Authorization" value="Bearer ${OPENAI_API_KEY}" />
+    </headers>
+    <request>
+      <max-body-size bytes="1048576" />
+      <timeout duration="120s" />
+    </request>
+    <ai provider="openai" />
+    <rate-limit requests="60" per="1m" key="api-key" />
+    <token-budget tokens="1000000" per="1d" key="api-key" />
+    <upstream url="https://api.openai.com/v1" />
+  </route>
+
+  <route path="/local/*" auth="api-key" description="Local models (Ollama), load balanced">
+    <ai provider="ollama" model="llama3.2" />
+    <response>
+      <cache ttl="5m" />
+    </response>
+    <load-balance strategy="failover">
+      <upstream url="http://127.0.0.1:11434" />
+      <upstream url="http://192.168.1.20:11434" />
+    </load-balance>
+  </route>
+
+  <route path="/httpbin/*" auth="none" description="Any URL works, not just models">
+    <upstream url="https://httpbin.org" />
+  </route>
+</moxy>

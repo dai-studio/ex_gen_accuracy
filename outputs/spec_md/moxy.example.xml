@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Example Moxy configuration. Copy to moxy.xml (or point MOXY_CONFIG at it).
+  Secrets are never written here: ${NAME} references are filled from the
+  environment when the file is loaded, and the file is invalid if one is unset.
+-->
+<moxy version="1">
+  <server host="127.0.0.1" port="8080"/>
+
+  <auth issuer="https://accounts.example.com" client-id="moxy"
+        client-secret="${MOXY_OIDC_CLIENT_SECRET}" session-ttl="24h">
+    <admin email="admin@example.com"/>
+  </auth>
+
+  <!-- OpenAI: point any OpenAI SDK at http://127.0.0.1:8080/openai with a Moxy API key. -->
+  <route path="/openai/*" auth="api-key" description="OpenAI models">
+    <headers>
+      <set name="Authorization" value="Bearer ${OPENAI_API_KEY}"/>
+    </headers>
+    <request>
+      <max-body-size bytes="10485760"/>
+      <timeout duration="120s"/>
+    </request>
+    <ai provider="openai"/>
+    <rate-limit requests="60" per="1m" key="api-key"/>
+    <token-budget tokens="2000000" per="1d" key="api-key"/>
+    <upstream url="https://api.openai.com/v1"/>
+  </route>
+
+  <!-- Anthropic, with a fixed model and a response cache for identical non-streamed requests. -->
+  <route path="/anthropic/*" description="Claude models">
+    <headers>
+      <set name="x-api-key" value="${ANTHROPIC_API_KEY}"/>
+      <set name="anthropic-version" value="2023-06-01"/>
+    </headers>
+    <response>
+      <cache ttl="5m"/>
+    </response>
+    <ai provider="anthropic" model="claude-sonnet-5-5"/>
+    <upstream url="https://api.anthropic.com/v1"/>
+  </route>
+
+  <!-- Two local Ollama instances, signed-in users only. -->
+  <route path="/local/*" auth="session" description="Local models via Ollama">
+    <ai provider="ollama"/>
+    <token-budget tokens="500000" per="1h" key="user"/>
+    <load-balance strategy="round-robin">
+      <upstream url="http://127.0.0.1:11434"/>
+      <upstream url="http://127.0.0.1:11435"/>
+    </load-balance>
+  </route>
+
+  <!-- Moxy is also a general-purpose reverse proxy. -->
+  <route path="/status/*" auth="none" description="Internal status service">
+    <response>
+      <set name="X-Served-By" value="moxy"/>
+    </response>
+    <upstream url="http://127.0.0.1:9000"/>
+  </route>
+</moxy>

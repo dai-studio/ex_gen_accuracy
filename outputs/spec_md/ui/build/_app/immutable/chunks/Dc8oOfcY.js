@@ -1,0 +1,1 @@
+import{P as e}from"./B0c6u8Ch.js";import{n as t}from"./BnyWnKwo.js";var n=e({me:null,loaded:!1});async function r(){return n.me=await t(),n.loaded=!0,n.me}export{n,r as t};

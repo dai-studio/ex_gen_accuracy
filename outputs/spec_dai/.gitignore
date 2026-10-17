@@ -1,0 +1,4 @@
+/target
+/data
+/ui/node_modules
+/ui/.svelte-kit

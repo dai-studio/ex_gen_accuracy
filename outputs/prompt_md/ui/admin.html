@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin · {{title}}</title>
+  <style nonce="{{nonce}}">{{{styles}}}</style>
+</head>
+<body class="admin">
+  <header class="bar">
+    <span class="brand">{{title}} admin</span>
+    <span class="spacer"></span>
+    <a href="/chat">Chat</a>
+    <a href="/.well-known/moxy.json">Discovery</a>
+    <span class="who">Signed in as {{user}}</span>
+    <button id="logout" type="button">Sign out</button>
+  </header>
+  <main>
+    <section class="card">
+      <div class="actions">
+        <h2>Gateway</h2>
+        <span class="spacer"></span>
+        <button id="reload" type="button">Reload config</button>
+        <button id="reset" type="button">Reset stats</button>
+        <span id="notice"></span>
+      </div>
+      <div class="kv" id="status"></div>
+    </section>
+    <section class="card">
+      <h2>Routes</h2>
+      <table>
+        <thead><tr><th>Route</th><th>Path</th><th>Methods</th><th>Middleware</th><th>Models</th><th>Upstreams</th></tr></thead>
+        <tbody id="routes"></tbody>
+      </table>
+    </section>
+    <section class="card">
+      <h2>Traffic by route</h2>
+      <table>
+        <thead><tr><th>Route</th><th>Requests</th><th>2xx</th><th>4xx</th><th>5xx</th><th>Avg ms</th><th>Max ms</th><th>Tokens in</th><th>Tokens out</th><th>Last request</th></tr></thead>
+        <tbody id="route-stats"></tbody>
+      </table>
+    </section>
+    <section class="card">
+      <h2>Usage by caller</h2>
+      <table>
+        <thead><tr><th>Caller</th><th>Requests</th><th>Errors</th><th>Tokens in</th><th>Tokens out</th><th>Total tokens</th></tr></thead>
+        <tbody id="principal-stats"></tbody>
+      </table>
+    </section>
+    <section class="card">
+      <h2>Usage by model</h2>
+      <table>
+        <thead><tr><th>Model</th><th>Requests</th><th>Errors</th><th>Tokens in</th><th>Tokens out</th><th>Total tokens</th></tr></thead>
+        <tbody id="model-stats"></tbody>
+      </table>
+    </section>
+  </main>
+  <script nonce="{{nonce}}">
+    const $ = (id) => document.getElementById(id);
+
+    function cell(content) {
+      const td = document.createElement('td');
+      if (content instanceof Node) td.appendChild(content);
+      else td.textContent = content == null ? '' : String(content);
+      return td;
+    }
+    function pills(items, cls) {
+      const frag = document.createDocumentFragment();
+      for (const item of items) {
+        const span = document.createElement('span');
+        span.className = 'pill' + (cls ? ' ' + cls(item) : '');
+        span.textContent = typeof item === 'string' ? item : item.label;
+        if (item.title) span.title = item.title;
+        frag.appendChild(span);
+      }
+      return frag;
+    }
+    function rows(tbody, list, toCells) {
+      tbody.replaceChildren(...list.map((item) => {
+        const tr = document.createElement('tr');
+        for (const c of toCells(item)) tr.appendChild(cell(c));
+        return tr;
+      }));
+      if (!list.length) {
+        const tr = document.createElement('tr');
+        const td = cell('No data yet');
+        td.colSpan = 10;
+        td.className = 'muted';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+      }
+    }
+    async function get(path) {
+      const res = await fetch(path, { credentials: 'same-origin' });
+      if (res.status === 401) { location.href = '/auth/login?next=/admin'; throw new Error('signed out'); }
+      if (!res.ok) throw new Error(path + ': ' + res.status);
+      return res.json();
+    }
+    async function post(path) {
+      const res = await fetch(path, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: '{}' });
+      return { ok: res.ok, body: await res.json().catch(() => ({})) };
+    }
+    function notice(text, ok) {
+      const el = $('notice');
+      el.textContent = text;
+      el.className = ok ? 'ok' : 'error';
+      setTimeout(() => { if (el.textContent === text) el.textContent = ''; }, 6000);
+    }
+
+    async function refresh() {
+      const [status, routes, stats] = await Promise.all([get('/admin/api/status'), get('/admin/api/routes'), get('/admin/api/stats')]);
+      const kv = [
+        ['Version', status.version], ['Uptime', status.uptime_s + ' s'], ['Config', status.config_path || '(in memory)'],
+        ['Config loaded', status.config_loaded_at], ['Routes / models', status.routes + ' / ' + status.models],
+        ['Users / API keys', status.auth.users + ' / ' + status.auth.api_keys], ['Token secret', status.auth.secret],
+        ['Requests (since ' + stats.since + ')', stats.total.requests + ' (' + stats.total.totalTokens + ' tokens)'],
+      ];
+      $('status').replaceChildren(...kv.flatMap(([k, v]) => {
+        const a = document.createElement('span'); a.className = 'muted'; a.textContent = k;
+        const b = document.createElement('span'); b.textContent = v;
+        return [a, b];
+      }));
+      rows($('routes'), routes.routes, (r) => [
+        r.id + (r.hidden ? ' (hidden)' : ''), r.path, r.methods.join(', '), pills(r.middleware),
+        pills(r.models.map((m) => m.id === m.upstream_model ? m.id : { label: m.id + ' → ' + m.upstream_model })),
+        pills(r.upstreams.map((u) => ({ label: u.name || u.url, title: u.url + (u.health.lastError ? '\nlast error: ' + u.health.lastError : ''), up: u.health.healthy })), (u) => (u.up ? 'up' : 'down')),
+      ]);
+      const entries = (obj) => Object.entries(obj).sort((a, b) => b[1].requests - a[1].requests);
+      rows($('route-stats'), entries(stats.routes), ([id, c]) => [id, c.requests, c.status['2xx'], c.status['4xx'], c.status['5xx'], c.avgLatencyMs, c.maxLatencyMs, c.promptTokens, c.completionTokens, c.lastRequestAt || '']);
+      rows($('principal-stats'), entries(stats.principals), ([id, c]) => [id, c.requests, c.errors, c.promptTokens, c.completionTokens, c.totalTokens]);
+      rows($('model-stats'), entries(stats.models), ([id, c]) => [id, c.requests, c.errors, c.promptTokens, c.completionTokens, c.totalTokens]);
+    }
+
+    $('reload').addEventListener('click', async () => {
+      const { ok, body } = await post('/admin/api/reload');
+      notice(ok ? 'Reloaded: ' + body.routes + ' routes' + (body.warnings && body.warnings.length ? ' (' + body.warnings.join('; ') + ')' : '') : 'Reload failed: ' + (body.error || 'unknown error'), ok);
+      refresh().catch(() => {});
+    });
+    $('reset').addEventListener('click', async () => {
+      const { ok } = await post('/admin/api/stats/reset');
+      notice(ok ? 'Stats reset' : 'Reset failed', ok);
+      refresh().catch(() => {});
+    });
+    $('logout').addEventListener('click', async () => {
+      await post('/auth/logout');
+      location.href = '/auth/login?next=/admin';
+    });
+
+    refresh().catch((err) => notice(err.message, false));
+    setInterval(() => refresh().catch(() => {}), 5000);
+  </script>
+</body>
+</html>

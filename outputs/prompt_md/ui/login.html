@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · {{title}}</title>
+  <style nonce="{{nonce}}">{{{styles}}}</style>
+</head>
+<body>
+  <div class="centered">
+    <form class="card login" method="post" action="/auth/login">
+      <h1>{{title}}</h1>
+      <p class="error" id="error">{{error}}</p>
+      <p class="muted">{{notice}}</p>
+      <input type="hidden" name="next" value="{{next}}">
+      <label for="username">Username</label>
+      <input id="username" name="username" autocomplete="username" required autofocus>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <button class="primary" type="submit">Sign in</button>
+    </form>
+  </div>
+  <script nonce="{{nonce}}">
+    // Plain form POST works without JavaScript; this just hides the empty error line.
+    const error = document.getElementById('error');
+    if (!error.textContent.trim()) error.classList.add('hidden');
+  </script>
+</body>
+</html>
